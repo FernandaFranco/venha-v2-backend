@@ -1,0 +1,28 @@
+# Python
+
+venv/
+**pycache**/
+_.pyc
+_.pyo
+_.pyd
+.Python
+_.so
+_.egg
+_.egg-info/
+dist/
+build/
+
+# Environment
+
+.env
+
+# Database
+
+_.db
+_.sqlite
+\*.sqlite3
+
+# Uploads
+
+uploads/
+
