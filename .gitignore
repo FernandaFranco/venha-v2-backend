@@ -1,28 +1,45 @@
 # Python
-
 venv/
-**pycache**/
-_.pyc
-_.pyo
-_.pyd
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 .Python
-_.so
-_.egg
-_.egg-info/
+*.so
+*.egg
+*.egg-info/
 dist/
 build/
+*.py[cod]
+*$py.class
 
-# Environment
-
+# Environment variables
 .env
+.env.local
+.env.*.local
 
 # Database
+*.db
+*.sqlite
+*.sqlite3
 
-_.db
-_.sqlite
-\*.sqlite3
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
 
-# Uploads
+# Flask
+instance/
+.pytest_cache/
+.coverage
+htmlcov/
 
-uploads/
+# Logs
+*.log
 
+# OS
+Thumbs.db
