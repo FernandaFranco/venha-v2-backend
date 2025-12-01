@@ -372,5 +372,7 @@ Este projeto foi desenvolvido para fins educacionais.
 ## 👤 Autora
 
 Fernanda Franco
+
 PUC-Rio - Pós-Graduação em Engenharia de Software
+
 Sprint de Arquitetura de Software - 2025
