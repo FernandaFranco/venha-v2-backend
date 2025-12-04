@@ -1,4 +1,4 @@
-# Sistema de Convites Online
+# Venha - Sistema de Convites Online
 
 API REST para criação e gerenciamento de convites de eventos com funcionalidade de RSVP.
 

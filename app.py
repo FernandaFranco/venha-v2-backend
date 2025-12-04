@@ -27,14 +27,14 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 bcrypt.init_app(app)
 limiter.init_app(app)
-CORS(app)
+CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
 
 # Swagger API
 api = Api(
     app,
     version="1.0",
-    title="Invitations API",
-    description="API for creating and managing event invitations with RSVP functionality",
+    title="Venha API",
+    description="API para criação e gerenciamento de convites de eventos",
     doc="/api/docs",
     catch_all_404s=False,
 )
@@ -710,7 +710,7 @@ def redirect_root():
 
 
 # Override the Flask-RESTX root endpoint
-app.view_functions['root'] = redirect_root
+app.view_functions["root"] = redirect_root
 
 
 if __name__ == "__main__":
