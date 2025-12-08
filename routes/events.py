@@ -2,7 +2,6 @@
 from flask import Blueprint, request, jsonify, session, Response
 from extensions import db
 from models import Host, Event, Attendee
-from services.cep_service import get_address_from_cep
 from datetime import datetime
 import csv
 import io
@@ -27,14 +26,12 @@ def require_auth(f):
 def create_event():
     data = request.get_json()
 
-    required = ["title", "event_date", "start_time", "address_cep"]
+    # Campos obrigatórios atualizados
+    required = ["title", "event_date", "start_time", "address_full"]
     if not all(field in data for field in required):
         return jsonify({"error": "Missing required fields"}), 400
 
-    address_full = get_address_from_cep(data["address_cep"])
-    if not address_full:
-        return jsonify({"error": "Invalid CEP"}), 400
-
+    # Criar evento sem validar CEP
     event = Event(
         host_id=session["host_id"],
         title=data["title"],
@@ -46,8 +43,8 @@ def create_event():
             if data.get("end_time")
             else None
         ),
-        address_cep=data["address_cep"],
-        address_full=address_full,
+        address_cep=data.get("address_cep", ""),
+        address_full=data["address_full"],  # Vem do frontend
         allow_modifications=data.get("allow_modifications", True),
         allow_cancellations=data.get("allow_cancellations", True),
     )

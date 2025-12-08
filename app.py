@@ -5,7 +5,6 @@ from flask_restx import Api, Resource, fields
 from extensions import db, bcrypt, limiter
 from models import Host, Event, Attendee
 from email_validator import validate_email, EmailNotValidError
-from services.cep_service import get_address_from_cep
 from services.email_service import (
     send_rsvp_notification,
     send_modification_notification,
@@ -98,7 +97,12 @@ event_create_model = api.model(
         ),
         "end_time": fields.String(description="End time (HH:MM)", example="22:00"),
         "address_cep": fields.String(
-            required=True, description="Brazilian CEP", example="22040-020"
+            description="Brazilian CEP (optional)", example="22040-020"
+        ),
+        "address_full": fields.String(
+            required=True,
+            description="Full address",
+            example="Av. Atlântica, 1702, Copacabana, Rio de Janeiro - RJ",
         ),
         "allow_modifications": fields.Boolean(
             description="Allow guests to modify RSVP", default=True, example=True
@@ -305,17 +309,13 @@ class CreateEvent(Resource):
 
         data = request.get_json()
 
-        required = ["title", "event_date", "start_time", "address_cep"]
+        # Campos obrigatórios
+        required = ["title", "event_date", "start_time", "address_full"]
         if not all(field in data for field in required):
             api.abort(
                 400,
-                "Missing required fields: title, event_date, start_time, address_cep",
+                "Missing required fields: title, event_date, start_time, address_full",
             )
-
-        # Get address from CEP
-        address_full = get_address_from_cep(data["address_cep"])
-        if not address_full:
-            api.abort(400, "Invalid CEP")
 
         # Parse dates/times
         try:
@@ -329,7 +329,7 @@ class CreateEvent(Resource):
         except ValueError as e:
             api.abort(400, f"Invalid date/time format: {str(e)}")
 
-        # Create event
+        # Criar evento (sem buscar CEP)
         event = Event(
             host_id=session["host_id"],
             title=data["title"],
@@ -337,8 +337,8 @@ class CreateEvent(Resource):
             event_date=event_date,
             start_time=start_time,
             end_time=end_time,
-            address_cep=data["address_cep"],
-            address_full=address_full,
+            address_cep=data.get("address_cep", ""),  # Apenas armazenar, não validar
+            address_full=data["address_full"],  # Vem do frontend já formatado
             allow_modifications=data.get("allow_modifications", True),
             allow_cancellations=data.get("allow_cancellations", True),
         )
