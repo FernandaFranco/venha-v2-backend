@@ -221,3 +221,57 @@ def export_attendees_csv(event_id):
             "Content-Disposition": f"attachment; filename=event_{event_id}_attendees.csv"
         },
     )
+
+
+@bp.route("/<int:event_id>/attendees/<int:attendee_id>", methods=["PUT"])
+@require_auth
+def update_attendee(event_id, attendee_id):
+    """Update attendee (host only)"""
+    event = Event.query.get(event_id)
+
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    if event.host_id != session["host_id"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    attendee = Attendee.query.get(attendee_id)
+    if not attendee or attendee.event_id != event_id:
+        return jsonify({"error": "Attendee not found"}), 404
+
+    data = request.get_json()
+
+    if "name" in data:
+        attendee.name = data["name"]
+    if "num_adults" in data:
+        attendee.num_adults = data["num_adults"]
+    if "num_children" in data:
+        attendee.num_children = data["num_children"]
+    if "comments" in data:
+        attendee.comments = data["comments"]
+
+    db.session.commit()
+
+    return jsonify({"message": "Attendee updated successfully"}), 200
+
+
+@bp.route("/<int:event_id>/attendees/<int:attendee_id>", methods=["DELETE"])
+@require_auth
+def delete_attendee(event_id, attendee_id):
+    """Delete attendee (host only)"""
+    event = Event.query.get(event_id)
+
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    if event.host_id != session["host_id"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    attendee = Attendee.query.get(attendee_id)
+    if not attendee or attendee.event_id != event_id:
+        return jsonify({"error": "Attendee not found"}), 404
+
+    db.session.delete(attendee)
+    db.session.commit()
+
+    return jsonify({"message": "Attendee deleted successfully"}), 200
