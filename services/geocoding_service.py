@@ -1,4 +1,5 @@
 # backend/services/geocoding_service.py
+"""Serviço de geocodificação de endereços usando Nominatim (OpenStreetMap)."""
 import re
 import requests
 
@@ -37,20 +38,32 @@ def geocode_address(address_full):
         number_match = re.search(r',\s*(\d+)', address_full)
         number = number_match.group(1) if number_match else None
 
-        # 3. Extrair cidade (antes do hífen com estado)
-        city_match = re.search(r',\s*([^,]+)\s*-\s*([A-Z]{2})', address_full)
-        city = city_match.group(1).strip() if city_match else None
+        # 3. Extrair cidade e estado
+        city_state_match = re.search(r',\s*([^,]+)\s*-\s*([A-Z]{2})', address_full)
+        if city_state_match:
+            city = city_state_match.group(1).strip()
+            state = city_state_match.group(2).strip()
+        else:
+            city = None
+            state = None
 
         if not (street_name and city):
-            print(f"❌ Não foi possível extrair rua ou cidade do endereço")
+            print("❌ Não foi possível extrair rua ou cidade do endereço")
             return None, None
 
         # Montar endereço simplificado para Nominatim
-        # Formato: "Nome da Rua, Número, Cidade, Brasil"
+        # Formato: "Nome da Rua, Número, Cidade, Estado, Brasil"
+        # Incluir estado evita confusão com municípios homônimos
         if number:
-            simplified_address = f"{street_name}, {number}, {city}, Brasil"
+            if state:
+                simplified_address = f"{street_name}, {number}, {city}, {state}, Brasil"
+            else:
+                simplified_address = f"{street_name}, {number}, {city}, Brasil"
         else:
-            simplified_address = f"{street_name}, {city}, Brasil"
+            if state:
+                simplified_address = f"{street_name}, {city}, {state}, Brasil"
+            else:
+                simplified_address = f"{street_name}, {city}, Brasil"
 
         print(f"📍 Original: {address_full[:50]}...")
         print(f"   Simplificado: {simplified_address}")
@@ -80,7 +93,7 @@ def geocode_address(address_full):
                 print(f"   ✅ Sucesso! Lat={lat}, Lon={lon}")
                 return lat, lon
 
-        print(f"   ❌ Não encontrou coordenadas")
+        print("   ❌ Não encontrou coordenadas")
         return None, None
 
     except (requests.RequestException, ValueError, KeyError) as e:
