@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, session, Response
 from extensions import db
 from models import Host, Event, Attendee
+from services.geocoding_service import geocode_address
 from datetime import datetime
 import csv
 import io
@@ -31,7 +32,10 @@ def create_event():
     if not all(field in data for field in required):
         return jsonify({"error": "Missing required fields"}), 400
 
-    # Criar evento sem validar CEP
+    # Tentar geocodificar o endereço automaticamente
+    latitude, longitude = geocode_address(data["address_full"])
+
+    # Criar evento (se não encontrou coordenadas, salva None)
     event = Event(
         host_id=session["host_id"],
         title=data["title"],
@@ -44,7 +48,9 @@ def create_event():
             else None
         ),
         address_cep=data.get("address_cep", ""),
-        address_full=data["address_full"],  # Vem do frontend
+        address_full=data["address_full"],
+        latitude=latitude,
+        longitude=longitude,
         allow_modifications=data.get("allow_modifications", True),
         allow_cancellations=data.get("allow_cancellations", True),
     )
@@ -127,6 +133,8 @@ def get_event_by_slug(slug):
                         event.end_time.strftime("%H:%M") if event.end_time else None
                     ),
                     "address_full": event.address_full,
+                    "latitude": event.latitude,
+                    "longitude": event.longitude,
                     "allow_modifications": event.allow_modifications,
                     "allow_cancellations": event.allow_cancellations,
                 }

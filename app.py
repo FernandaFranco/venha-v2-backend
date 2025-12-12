@@ -10,6 +10,7 @@ from services.email_service import (
     send_modification_notification,
     send_cancellation_notification,
 )
+from services.geocoding_service import geocode_address
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -101,8 +102,8 @@ event_create_model = api.model(
         ),
         "address_full": fields.String(
             required=True,
-            description="Full address",
-            example="Av. Atlântica, 1702, Copacabana, Rio de Janeiro - RJ",
+            description="Full address (coordinates will be automatically geocoded)",
+            example="Av. Atlântica, 1702, Copacabana, Rio de Janeiro - RJ, Brasil",
         ),
         "allow_modifications": fields.Boolean(
             description="Allow guests to modify RSVP", default=True, example=True
@@ -329,7 +330,10 @@ class CreateEvent(Resource):
         except ValueError as e:
             api.abort(400, f"Invalid date/time format: {str(e)}")
 
-        # Criar evento (sem buscar CEP)
+        # Tentar geocodificar o endereço automaticamente
+        latitude, longitude = geocode_address(data["address_full"])
+
+        # Criar evento (se não encontrou coordenadas, salva None)
         event = Event(
             host_id=session["host_id"],
             title=data["title"],
@@ -338,7 +342,9 @@ class CreateEvent(Resource):
             start_time=start_time,
             end_time=end_time,
             address_cep=data.get("address_cep", ""),  # Apenas armazenar, não validar
-            address_full=data["address_full"],  # Vem do frontend já formatado
+            address_full=data["address_full"],
+            latitude=latitude,
+            longitude=longitude,
             allow_modifications=data.get("allow_modifications", True),
             allow_cancellations=data.get("allow_cancellations", True),
         )
@@ -419,6 +425,8 @@ class EventBySlug(Resource):
                     event.end_time.strftime("%H:%M") if event.end_time else None
                 ),
                 "address_full": event.address_full,
+                "latitude": event.latitude,
+                "longitude": event.longitude,
                 "allow_modifications": event.allow_modifications,
                 "allow_cancellations": event.allow_cancellations,
             }

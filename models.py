@@ -40,6 +40,8 @@ class Event(db.Model):
 
     address_cep = db.Column(db.String(10))
     address_full = db.Column(db.Text)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
 
     allow_modifications = db.Column(db.Boolean, default=True)
     allow_cancellations = db.Column(db.Boolean, default=True)
