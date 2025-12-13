@@ -283,3 +283,151 @@ def delete_attendee(event_id, attendee_id):
     db.session.commit()
 
     return jsonify({"message": "Attendee deleted successfully"}), 200
+
+
+@bp.route("/<int:event_id>", methods=["PUT"])
+@require_auth
+def update_event(event_id):
+    """Update event (host only)"""
+    event = Event.query.get(event_id)
+
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    if event.host_id != session["host_id"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+
+    try:
+        # Update basic fields
+        if "title" in data:
+            event.title = data["title"]
+
+        if "description" in data:
+            event.description = data["description"]
+
+        if "event_date" in data:
+            event.event_date = datetime.strptime(data["event_date"], "%Y-%m-%d").date()
+
+        if "start_time" in data:
+            event.start_time = datetime.strptime(data["start_time"], "%H:%M").time()
+
+        if "end_time" in data:
+            if data["end_time"]:
+                event.end_time = datetime.strptime(data["end_time"], "%H:%M").time()
+            else:
+                event.end_time = None
+
+        if "address_cep" in data:
+            event.address_cep = data["address_cep"]
+
+        if "address_full" in data:
+            event.address_full = data["address_full"]
+
+            # Re-geocode if address changed
+            from .events import geocode_address
+
+            lat, lon = geocode_address(data["address_full"], data.get("address_cep"))
+            event.latitude = lat
+            event.longitude = lon
+
+        if "allow_modifications" in data:
+            event.allow_modifications = data["allow_modifications"]
+
+        if "allow_cancellations" in data:
+            event.allow_cancellations = data["allow_cancellations"]
+
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "message": "Event updated successfully",
+                    "event": {"id": event.id, "slug": event.slug, "title": event.title},
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/<int:event_id>", methods=["DELETE"])
+@require_auth
+def delete_event(event_id):
+    """Delete event (host only)"""
+    event = Event.query.get(event_id)
+
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    if event.host_id != session["host_id"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        # Delete all attendees first (cascade should handle this, but being explicit)
+        Attendee.query.filter_by(event_id=event_id).delete()
+
+        # Delete event
+        db.session.delete(event)
+        db.session.commit()
+
+        return jsonify({"message": "Event deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/<int:event_id>/duplicate", methods=["POST"])
+@require_auth
+def duplicate_event(event_id):
+    """Duplicate an existing event (host only)"""
+    original_event = Event.query.get(event_id)
+
+    if not original_event:
+        return jsonify({"error": "Event not found"}), 404
+
+    if original_event.host_id != session["host_id"]:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        # Create new event with same data
+        new_event = Event(
+            host_id=session["host_id"],
+            title=f"{original_event.title} (Cópia)",
+            description=original_event.description,
+            event_date=original_event.event_date,
+            start_time=original_event.start_time,
+            end_time=original_event.end_time,
+            address_cep=original_event.address_cep,
+            address_full=original_event.address_full,
+            latitude=original_event.latitude,
+            longitude=original_event.longitude,
+            allow_modifications=original_event.allow_modifications,
+            allow_cancellations=original_event.allow_cancellations,
+        )
+
+        db.session.add(new_event)
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "message": "Event duplicated successfully",
+                    "event": {
+                        "id": new_event.id,
+                        "slug": new_event.slug,
+                        "title": new_event.title,
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

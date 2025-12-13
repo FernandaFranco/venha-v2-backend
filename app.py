@@ -114,6 +114,29 @@ event_create_model = api.model(
     },
 )
 
+event_update_model = api.model(
+    "EventUpdate",
+    {
+        "title": fields.String(
+            description="Event title", example="Festa de Aniversário (Atualizado)"
+        ),
+        "description": fields.String(description="Event description"),
+        "event_date": fields.String(
+            description="Event date (YYYY-MM-DD)", example="2024-12-25"
+        ),
+        "start_time": fields.String(description="Start time (HH:MM)", example="18:00"),
+        "end_time": fields.String(description="End time (HH:MM)", example="23:00"),
+        "address_cep": fields.String(description="ZIP code"),
+        "address_full": fields.String(description="Full address"),
+        "allow_modifications": fields.Boolean(
+            description="Allow guests to modify RSVP"
+        ),
+        "allow_cancellations": fields.Boolean(
+            description="Allow guests to cancel RSVP"
+        ),
+    },
+)
+
 rsvp_model = api.model(
     "RSVP",
     {
@@ -605,6 +628,40 @@ class ExportAttendees(Resource):
                 "Content-Disposition": f"attachment; filename=event_{event_id}_attendees.csv"
             },
         )
+
+
+@events_ns.route("/<int:event_id>")
+class EventManagement(Resource):
+    @events_ns.expect(event_update_model)
+    @events_ns.response(200, "Event updated")
+    @events_ns.response(401, "Not authenticated")
+    @events_ns.response(403, "Unauthorized")
+    @events_ns.response(404, "Event not found")
+    def put(self, event_id):
+        """Update event (host only)"""
+        # Implementation in routes/events.py
+        pass
+
+    @events_ns.response(200, "Event deleted")
+    @events_ns.response(401, "Not authenticated")
+    @events_ns.response(403, "Unauthorized")
+    @events_ns.response(404, "Event not found")
+    def delete(self, event_id):
+        """Delete event (host only)"""
+        # Implementation in routes/events.py
+        pass
+
+
+@events_ns.route("/<int:event_id>/duplicate")
+class DuplicateEvent(Resource):
+    @events_ns.response(201, "Event duplicated")
+    @events_ns.response(401, "Not authenticated")
+    @events_ns.response(403, "Unauthorized")
+    @events_ns.response(404, "Event not found")
+    def post(self, event_id):
+        """Duplicate an existing event"""
+        # Implementation in routes/events.py
+        pass
 
 
 # ============= ATTENDEE ROUTES =============
