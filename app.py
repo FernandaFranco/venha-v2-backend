@@ -624,8 +624,66 @@ class EventManagement(Resource):
     @events_ns.response(404, "Event not found")
     def put(self, event_id):
         """Update event (host only)"""
-        # Implementation in routes/events.py
-        pass
+        if "host_id" not in session:
+            api.abort(401, "Authentication required")
+
+        event = Event.query.get(event_id)
+
+        if not event:
+            api.abort(404, "Event not found")
+
+        if event.host_id != session["host_id"]:
+            api.abort(403, "Unauthorized")
+
+        data = request.get_json()
+
+        try:
+            # Update basic fields
+            if "title" in data:
+                event.title = data["title"]
+
+            if "description" in data:
+                event.description = data["description"]
+
+            if "event_date" in data:
+                event.event_date = datetime.strptime(data["event_date"], "%Y-%m-%d").date()
+
+            if "start_time" in data:
+                event.start_time = datetime.strptime(data["start_time"], "%H:%M").time()
+
+            if "end_time" in data:
+                if data["end_time"]:
+                    event.end_time = datetime.strptime(data["end_time"], "%H:%M").time()
+                else:
+                    event.end_time = None
+
+            if "address_cep" in data:
+                event.address_cep = data["address_cep"]
+
+            if "address_full" in data:
+                event.address_full = data["address_full"]
+
+                # Re-geocode if address changed
+                lat, lon = geocode_address(data["address_full"])
+                event.latitude = lat
+                event.longitude = lon
+
+            if "allow_modifications" in data:
+                event.allow_modifications = data["allow_modifications"]
+
+            if "allow_cancellations" in data:
+                event.allow_cancellations = data["allow_cancellations"]
+
+            db.session.commit()
+
+            return {
+                "message": "Event updated successfully",
+                "event": {"id": event.id, "slug": event.slug, "title": event.title},
+            }, 200
+
+        except Exception as e:
+            db.session.rollback()
+            api.abort(500, f"Error updating event: {str(e)}")
 
     @events_ns.response(200, "Event deleted")
     @events_ns.response(401, "Not authenticated")
@@ -633,8 +691,30 @@ class EventManagement(Resource):
     @events_ns.response(404, "Event not found")
     def delete(self, event_id):
         """Delete event (host only)"""
-        # Implementation in routes/events.py
-        pass
+        if "host_id" not in session:
+            api.abort(401, "Authentication required")
+
+        event = Event.query.get(event_id)
+
+        if not event:
+            api.abort(404, "Event not found")
+
+        if event.host_id != session["host_id"]:
+            api.abort(403, "Unauthorized")
+
+        try:
+            # Delete all attendees first (cascade should handle this, but being explicit)
+            Attendee.query.filter_by(event_id=event_id).delete()
+
+            # Delete event
+            db.session.delete(event)
+            db.session.commit()
+
+            return {"message": "Event deleted successfully"}, 200
+
+        except Exception as e:
+            db.session.rollback()
+            api.abort(500, f"Error deleting event: {str(e)}")
 
 
 @events_ns.route("/<int:event_id>/duplicate")
@@ -645,8 +725,49 @@ class DuplicateEvent(Resource):
     @events_ns.response(404, "Event not found")
     def post(self, event_id):
         """Duplicate an existing event"""
-        # Implementation in routes/events.py
-        pass
+        if "host_id" not in session:
+            api.abort(401, "Authentication required")
+
+        original_event = Event.query.get(event_id)
+
+        if not original_event:
+            api.abort(404, "Event not found")
+
+        if original_event.host_id != session["host_id"]:
+            api.abort(403, "Unauthorized")
+
+        try:
+            # Create new event with same data
+            new_event = Event(
+                host_id=session["host_id"],
+                title=f"{original_event.title} (Cópia)",
+                description=original_event.description,
+                event_date=original_event.event_date,
+                start_time=original_event.start_time,
+                end_time=original_event.end_time,
+                address_cep=original_event.address_cep,
+                address_full=original_event.address_full,
+                latitude=original_event.latitude,
+                longitude=original_event.longitude,
+                allow_modifications=original_event.allow_modifications,
+                allow_cancellations=original_event.allow_cancellations,
+            )
+
+            db.session.add(new_event)
+            db.session.commit()
+
+            return {
+                "message": "Event duplicated successfully",
+                "event": {
+                    "id": new_event.id,
+                    "slug": new_event.slug,
+                    "title": new_event.title,
+                },
+            }, 201
+
+        except Exception as e:
+            db.session.rollback()
+            api.abort(500, f"Error duplicating event: {str(e)}")
 
 
 # ============= ATTENDEE ROUTES =============
@@ -842,11 +963,7 @@ class CancelRSVP(Resource):
 
 
 # Keep original blueprints for backward compatibility
-from routes import auth, events, attendees
-
-app.register_blueprint(auth.bp)
-app.register_blueprint(events.bp)
-app.register_blueprint(attendees.bp)
+# Blueprints removed - all endpoints now use Flask-RESTX
 
 
 # Root redirect - override Flask-RESTX root route
