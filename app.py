@@ -13,6 +13,7 @@ from services.email_service import (
 from services.geocoding_service import geocode_address
 from datetime import datetime
 from dotenv import load_dotenv
+from sqlalchemy.exc import SQLAlchemyError
 import os
 import csv
 import io
@@ -646,7 +647,9 @@ class EventManagement(Resource):
                 event.description = data["description"]
 
             if "event_date" in data:
-                event.event_date = datetime.strptime(data["event_date"], "%Y-%m-%d").date()
+                event.event_date = datetime.strptime(
+                    data["event_date"], "%Y-%m-%d"
+                ).date()
 
             if "start_time" in data:
                 event.start_time = datetime.strptime(data["start_time"], "%H:%M").time()
@@ -681,7 +684,7 @@ class EventManagement(Resource):
                 "event": {"id": event.id, "slug": event.slug, "title": event.title},
             }, 200
 
-        except Exception as e:
+        except (ValueError, SQLAlchemyError) as e:
             db.session.rollback()
             api.abort(500, f"Error updating event: {str(e)}")
 
@@ -712,7 +715,7 @@ class EventManagement(Resource):
 
             return {"message": "Event deleted successfully"}, 200
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             db.session.rollback()
             api.abort(500, f"Error deleting event: {str(e)}")
 
@@ -765,7 +768,7 @@ class DuplicateEvent(Resource):
                 },
             }, 201
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             db.session.rollback()
             api.abort(500, f"Error duplicating event: {str(e)}")
 
