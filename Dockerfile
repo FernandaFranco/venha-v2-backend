@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código da aplicação
 COPY . .
 
+# Desabilitar buffering do Python (para ver logs em tempo real)
+ENV PYTHONUNBUFFERED=1
+
 # Expor porta do Flask
 EXPOSE 5000
 
