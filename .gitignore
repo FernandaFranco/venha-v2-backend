@@ -28,6 +28,8 @@ build/
 
 # Testing
 cookies.txt
+reset_db.py
+
 
 # IDE
 .vscode/
