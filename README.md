@@ -462,19 +462,32 @@ Este projeto foi desenvolvido como parte da Sprint de Arquitetura de Software da
 4. Execute `python app.py`
 5. Acesse a documentação em `http://localhost:5000/api/docs`
 
-### Testando sem SendGrid:
+### 📧 Modo de Emails (Importante para Avaliadores):
 
-Se preferir não configurar o SendGrid, edite `services/email_service.py` e substitua as funções para apenas imprimir no console:
+**O sistema está configurado em MODO SIMULAÇÃO por padrão.**
 
-```python
-def send_rsvp_notification(event, attendee):
-    print("=" * 50)
-    print(f"📧 EMAIL PARA: {event.host.email}")
-    print(f"ASSUNTO: Novo RSVP para {event.title}")
-    print(f"DE: {attendee.name}")
-    print("=" * 50)
-    return True
-```
+Os emails NÃO são enviados de verdade. Em vez disso, o conteúdo dos emails aparece nos logs do console quando:
+- Alguém confirma presença (RSVP)
+- Alguém modifica confirmação
+- Alguém cancela presença
+
+**Para ver os emails simulados:**
+1. Rode o projeto com Docker: `docker-compose up`
+2. Observe os logs do backend: `docker-compose logs -f backend`
+3. Ao fazer um RSVP, verá um log formatado como:
+   ```
+   ================================================================================
+   📧 EMAIL SIMULADO - NOVO RSVP
+   ================================================================================
+   De: noreply@venha.app
+   Para: host@example.com
+   Assunto: Novo RSVP para Meu Evento
+   ...
+   ```
+
+**Para habilitar SendGrid real em produção:**
+
+Veja as instruções completas no arquivo `services/email_service.py` (comentários no final do arquivo).
 
 ## 📄 Licença
 
