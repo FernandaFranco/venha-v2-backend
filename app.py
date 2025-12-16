@@ -479,6 +479,8 @@ class EventBySlug(Resource):
                 "longitude": event.longitude,
                 "allow_modifications": bool(event.allow_modifications),
                 "allow_cancellations": bool(event.allow_cancellations),
+                "host_name": event.host.name,
+                "host_whatsapp": event.host.whatsapp_number,
             }
         }, 200
 
@@ -781,6 +783,37 @@ class DuplicateEvent(Resource):
         except SQLAlchemyError:
             db.session.rollback()
             api.abort(500, "Erro ao duplicar evento. Tente novamente")
+
+
+@events_ns.route("/geocode")
+class GeocodeResource(Resource):
+    @events_ns.response(200, "Geocoding successful")
+    @events_ns.response(400, "Invalid address")
+    @limiter.limit("30 per minute")
+    def post(self):
+        """Geocode an address to get latitude and longitude"""
+        data = request.get_json()
+
+        if not data or "address" not in data:
+            api.abort(400, "Campo 'address' é obrigatório")
+
+        address = data["address"].strip()
+        if not address:
+            api.abort(400, "Endereço não pode estar vazio")
+
+        latitude, longitude = geocode_address(address)
+
+        if latitude is None or longitude is None:
+            return {
+                "latitude": None,
+                "longitude": None,
+                "message": "Não foi possível geocodificar o endereço. Verifique se está completo e correto."
+            }, 200
+
+        return {
+            "latitude": latitude,
+            "longitude": longitude
+        }, 200
 
 
 # ============= ATTENDEE ROUTES =============
