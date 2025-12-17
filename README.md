@@ -9,17 +9,15 @@ Este sistema permite que anfitriões criem eventos, gerem links de convite únic
 ### Funcionalidades Principais
 
 **Para Anfitriões:**
-
 - Cadastro e autenticação de usuário
 - Criação de eventos com data, hora e endereço (via CEP)
 - Visualização de lista de eventos criados
 - Gerenciamento de convidados confirmados
-- Recebimento de emails quando alguém confirma presença
+- Recebimento de emails simulados quando alguém confirma presença
 - Exportação de lista de convidados em CSV
 - Configuração de permissões (permitir/bloquear modificações e cancelamentos)
 
 **Para Convidados:**
-
 - Visualização de detalhes do evento via link único
 - Confirmação de presença (RSVP)
 - Informação de número de adultos e crianças
@@ -36,18 +34,13 @@ O sistema Venha utiliza uma arquitetura de três camadas (Frontend, Backend API,
 
 **Visão Resumida:**
 - **Frontend (Next.js):** Interface web responsiva com SSR, páginas públicas (convites) e privadas (dashboard)
-- **Backend (Flask REST API):** Esta API fornece a lógica de negócio, autenticação, validações e integrações com serviços externos
+- **Backend (Flask REST API):** Lógica de negócio, autenticação, validações e integrações com serviços externos
 - **Banco de Dados (SQLite):** Armazenamento persistente de hosts, eventos e confirmações
 - **Serviços Externos (Backend):** Google Geocoding com fallback Nominatim (coordenadas)
 - **Serviços Externos (Frontend):** ViaCEP (endereços brasileiros), Google Maps (visualização), WeatherAPI (previsão do tempo)
-- **Notificações:** Modo simulação - emails impressos no console (SendGrid configurável para produção)
+- **Notificações:** Modo simulação - emails impressos no console
 
 **Comunicação:** API REST com JSON, autenticação via session cookies, documentação Swagger/OpenAPI automática.
-
-**Endpoints Principais:**
-- `/api/auth/*` - Autenticação e gerenciamento de usuários
-- `/api/events/*` - CRUD de eventos e exportação
-- `/api/attendees/*` - Gerenciamento de RSVPs
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -55,10 +48,8 @@ O sistema Venha utiliza uma arquitetura de três camadas (Frontend, Backend API,
 - **Flask** - Framework web
 - **SQLAlchemy** - ORM para banco de dados
 - **SQLite** - Banco de dados (desenvolvimento)
-- **SendGrid** - Serviço de envio de emails
 - **Flask-RESTX** - Documentação Swagger/OpenAPI
 - **Bcrypt** - Hash de senhas
-- **ViaCEP API** - Consulta de endereços via CEP
 
 ## 📁 Estrutura do Projeto
 
@@ -74,205 +65,174 @@ backend/
 │   └── attendees.py           # RSVPs e convidados
 ├── services/                   # Serviços externos
 │   ├── __init__.py
-│   ├── email_service.py       # Integração SendGrid
+│   ├── email_service.py       # Simulação de emails
+│   ├── geocoding_service.py   # Integração Google Geocoding/Nominatim
 │   └── cep_service.py         # Integração ViaCEP
 ├── requirements.txt            # Dependências Python
 ├── .env.example               # Template de variáveis de ambiente
 └── .gitignore                 # Arquivos ignorados pelo Git
 ```
 
-## 🚀 Configuração e Instalação
+## 🚀 Configuração e Instalação (Docker)
 
-### Opção 1: Usando Docker (Recomendado)
+A forma recomendada de rodar o projeto completo é usando Docker. Este método garante que todas as dependências sejam instaladas corretamente e que ambos os serviços (frontend + backend) se comuniquem adequadamente.
 
-A forma mais fácil de rodar o projeto completo (frontend + backend) é usando Docker.
-
-#### Pré-requisitos
+### Pré-requisitos
 - Docker Desktop instalado e rodando
-- Arquivo `.env` configurado (veja instruções abaixo)
+- Git instalado
+- Conexão com internet para download de dependências
 
-#### Configurar Variáveis de Ambiente
+### Passo 1: Clonar os Repositórios
 
-1. Copie o arquivo de exemplo:
+Crie um diretório pai e clone ambos os projetos:
 
 ```bash
+mkdir venha_project
+cd venha_project
+git clone https://github.com/FernandaFranco/rsvp_app_api.git backend
+git clone https://github.com/FernandaFranco/rsvp_app_front_end.git frontend
+```
+
+**Importante:** Os comandos acima clonam os repositórios nas pastas `backend` e `frontend` respectivamente, que são os nomes esperados pelo Docker Compose.
+
+**Estrutura de diretórios esperada:**
+```
+venha_project/
+├── backend/    (este repositório)
+│   ├── app.py
+│   ├── .env.example
+│   ├── Dockerfile
+│   └── ...
+└── frontend/   (repositório do frontend)
+    ├── docker-compose.yml
+    ├── .env.local.example
+    ├── Dockerfile
+    └── ...
+```
+
+### Passo 2: Configurar Variáveis de Ambiente
+
+1. Navegue até a pasta do backend e copie o arquivo de exemplo:
+
+```bash
+cd backend
 cp .env.example .env
 ```
 
-2. Edite o arquivo `.env` com suas configurações:
+2. Gere uma chave secreta única para o SECRET_KEY:
 
-```bash
-FLASK_APP=app.py
-FLASK_ENV=development
-SECRET_KEY=sua-chave-secreta-aqui
-DATABASE_URL=sqlite:///invitations.db
-SENDGRID_API_KEY=sua-chave-sendgrid-aqui
-SENDER_EMAIL=seu-email@gmail.com
-GOOGLE_GEOCODING_API_KEY=sua-chave-google-aqui
-FRONTEND_URL=http://localhost:3000
-```
-
-**Como gerar SECRET_KEY:**
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-**Como obter SENDGRID_API_KEY:** Veja seção "Como obter SENDGRID_API_KEY" abaixo.
+3. Edite o arquivo `.env` e configure as variáveis:
 
-**Como obter GOOGLE_GEOCODING_API_KEY:**
+```bash
+# Obrigatórias
+FLASK_APP=app.py
+FLASK_ENV=development
+SECRET_KEY=sua-chave-secreta-gerada-aqui
+DATABASE_URL=sqlite:///invitations.db
+
+# Opcional - Google Geocoding API (usa Nominatim como fallback se não configurado)
+GOOGLE_GEOCODING_API_KEY=sua-chave-google-aqui
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+```
+
+**Substituições necessárias:**
+- `sua-chave-secreta-gerada-aqui`: Cole a chave gerada no passo 2
+- `sua-chave-google-aqui`: Sua chave do Google Geocoding API (opcional)
+
+**Como obter GOOGLE_GEOCODING_API_KEY (Opcional):**
 1. Acesse [Google Cloud Console](https://console.cloud.google.com)
 2. Crie um projeto ou selecione um existente
 3. Ative a API "Geocoding API"
 4. Vá em "Credenciais" → "Criar credenciais" → "Chave de API"
 5. Copie a chave gerada
+6. (Recomendado) Configure restrições de IP ou serviço para segurança
 
-#### Rodar com Docker
+**Nota sobre APIs Externas:** As chaves de API serão compartilhadas separadamente para fins de avaliação. Não inclua chaves reais no código versionado.
 
-**IMPORTANTE:** O docker-compose.yml está localizado na pasta `frontend/`. Para rodar o projeto completo:
+### Passo 3: Configurar Frontend
 
-1. Certifique-se de que os repositórios estão no mesmo diretório pai:
-   ```
-   projeto/
-   ├── backend/    (este repositório)
-   └── frontend/   (repositório do frontend)
-   ```
+Configure também o `.env.local` do frontend seguindo as instruções no README do frontend.
 
-2. Configure o `.env.local` do frontend (veja README do frontend)
+### Passo 4: Rodar com Docker
 
-3. Navegue até a pasta do frontend e rode:
+**IMPORTANTE:** O `docker-compose.yml` está localizado na pasta `frontend/`. Para rodar o projeto completo:
+
+1. Navegue até a pasta do frontend:
    ```bash
    cd ../frontend
+   ```
+
+2. Execute o Docker Compose:
+   ```bash
    docker-compose up --build
    ```
 
-4. Acesse:
+   **O que acontece:**
+   - O Docker baixa as imagens base necessárias
+   - Instala todas as dependências do backend (Python/Flask)
+   - Instala todas as dependências do frontend (Next.js)
+   - Inicia ambos os serviços
+   - Backend fica disponível na porta 5000
+   - Frontend fica disponível na porta 3000
+
+   **Primeira execução:** Pode levar alguns minutos para baixar e instalar tudo.
+
+3. Aguarde até ver as mensagens indicando que os serviços estão prontos. Então acesse:
    - **Frontend:** http://localhost:3000
    - **Backend API:** http://localhost:5000
    - **Documentação Swagger:** http://localhost:5000/api/docs
 
-**Comandos úteis:**
+### Comandos Úteis do Docker
+
+**Ver logs em tempo real:**
 ```bash
-# Ver logs em tempo real
 docker-compose logs -f
+```
 
-# Ver logs apenas do backend
+**Ver logs apenas do backend:**
+```bash
 docker-compose logs -f backend
+```
 
-# Parar containers
+**Parar containers (mantém os dados):**
+```bash
 docker-compose down
+```
 
-# Reiniciar backend
+**Parar e remover volumes (limpa o banco de dados):**
+```bash
+docker-compose down -v
+```
+
+**Reiniciar apenas o backend:**
+```bash
 docker restart venha_backend
+```
 
-# Acessar terminal do container
+**Acessar terminal do container:**
+```bash
 docker exec -it venha_backend bash
 ```
 
-### Opção 2: Desenvolvimento Local (sem Docker)
-
-#### Pré-requisitos
-
-- Python 3.8 ou superior
-- pip (gerenciador de pacotes Python)
-- Conta SendGrid (gratuita) para envio de emails
-
-#### Passo 1: Clonar o Repositório
-
+**Reconstruir do zero (se houver problemas):**
 ```bash
-git clone https://github.com/FernandaFranco/rsvp_app_api.git
-cd backend
+docker-compose down -v
+docker-compose up --build --force-recreate
 ```
-
-#### Passo 2: Criar Ambiente Virtual
-
-**No Mac/Linux:**
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**No Windows:**
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-Você verá `(venv)` no início da linha de comando quando o ambiente estiver ativado.
-
-### Passo 3: Instalar Dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-### Passo 4: Configurar Variáveis de Ambiente
-
-1. Copie o arquivo de exemplo:
-
-```bash
-cp .env.example .env
-```
-
-2. Edite o arquivo `.env` e configure as seguintes variáveis:
-
-```bash
-FLASK_APP=app.py
-FLASK_ENV=development
-SECRET_KEY=sua-chave-secreta-aqui
-DATABASE_URL=sqlite:///invitations.db
-SENDGRID_API_KEY=sua-chave-sendgrid-aqui
-```
-
-#### Como gerar SECRET_KEY:
-
-```bash
-python3 -c "import secrets; print(secrets.token_hex(32))"
-```
-
-Cole o resultado no campo `SECRET_KEY` do arquivo `.env`.
-
-#### Como obter SENDGRID_API_KEY:
-
-1. Crie uma conta gratuita em [SendGrid](https://sendgrid.com) (100 emails/dia grátis)
-2. Vá em **Settings → API Keys**
-3. Clique em **Create API Key**
-4. Dê um nome (ex: "invitations-app")
-5. Selecione **Full Access**
-6. Copie a chave (começa com `SG.`)
-7. Cole no campo `SENDGRID_API_KEY`
-
-**IMPORTANTE:** Verifique um remetente:
-
-1. Vá em **Settings → Sender Authentication**
-2. Clique em **Verify a Single Sender**
-3. Preencha com seu email pessoal
-4. Verifique seu email e clique no link de confirmação
-5. Edite `services/email_service.py` linha 8 e substitua `'noreply@yourdomain.com'` pelo seu email verificado
-
-### Passo 5: Executar a Aplicação
-
-```bash
-python app.py
-```
-
-A API estará rodando em: `http://localhost:5000`
-
-A documentação Swagger estará disponível em: `http://localhost:5000/api/docs`
 
 ## 📖 Documentação da API
 
 ### Swagger UI
 
-Acesse a documentação interativa em:
-
-```
-http://localhost:5000/api/docs
-```
+Acesse a documentação interativa em: http://localhost:5000/api/docs
 
 Aqui você pode:
-
 - Ver todos os endpoints disponíveis
 - Testar requisições diretamente no navegador
 - Ver exemplos de requisições e respostas
@@ -280,222 +240,90 @@ Aqui você pode:
 
 ### Principais Endpoints
 
-#### Autenticação
-
+**Autenticação:**
 - `POST /api/auth/signup` - Criar conta de anfitrião
 - `POST /api/auth/login` - Fazer login
 - `POST /api/auth/logout` - Fazer logout
 - `GET /api/auth/me` - Obter usuário atual
 
-#### Eventos
-
+**Eventos:**
 - `POST /api/events/create` - Criar novo evento (requer autenticação)
 - `GET /api/events/my-events` - Listar meus eventos (requer autenticação)
 - `GET /api/events/{slug}` - Obter detalhes de evento por slug (público)
 - `GET /api/events/{event_id}/attendees` - Listar convidados (requer autenticação)
-- `PUT /api/events/{event_id}/attendees/{attendee_id}` - Atualizar convidado
-- `DELETE /api/events/{event_id}/attendees/{attendee_id}` - Remover convidado
 - `GET /api/events/{event_id}/export-csv` - Exportar convidados como CSV
 
-#### Convidados (RSVP)
-
+**Convidados (RSVP):**
 - `POST /api/attendees/rsvp` - Confirmar presença em evento
 - `POST /api/attendees/find` - Buscar confirmação por WhatsApp
 - `PUT /api/attendees/modify` - Modificar confirmação
 - `POST /api/attendees/cancel` - Cancelar confirmação
 
-## 🧪 Testando a API
-
-### Exemplo 1: Criar uma conta
-
-```bash
-curl -X POST http://localhost:5000/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "anfitriao@exemplo.com",
-    "password": "senha123",
-    "name": "João Silva",
-    "whatsapp_number": "5521999999999"
-  }'
-```
-
-### Exemplo 2: Fazer login
-
-```bash
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "anfitriao@exemplo.com",
-    "password": "senha123"
-  }' \
-  --cookie-jar cookies.txt
-```
-
-### Exemplo 3: Criar um evento
-
-```bash
-curl -X POST http://localhost:5000/api/events/create \
-  -H "Content-Type: application/json" \
-  --cookie cookies.txt \
-  -d '{
-    "title": "Festa de Aniversário",
-    "description": "Venha comemorar comigo!",
-    "event_date": "2025-12-25",
-    "start_time": "18:00",
-    "end_time": "22:00",
-    "address_cep": "22040-020",
-    "allow_modifications": true,
-    "allow_cancellations": true
-  }'
-```
-
-### Exemplo 4: Confirmar presença (RSVP)
-
-```bash
-curl -X POST http://localhost:5000/api/attendees/rsvp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_slug": "abc123",
-    "whatsapp_number": "5521988888888",
-    "name": "Maria Santos",
-    "num_adults": 2,
-    "num_children": 1,
-    "comments": "Preciso de refeição vegetariana"
-  }'
-```
-
-## 🗄️ Banco de Dados
-
-O sistema usa SQLite para desenvolvimento. As tabelas são criadas automaticamente na primeira execução.
-
-### Modelo de Dados
-
-**hosts** (Anfitriões)
-
-- id, email, whatsapp_number, name, password_hash, created_at
-
-**events** (Eventos)
-
-- id, host_id, slug, title, description, event_date, start_time, end_time
-- address_cep, address_full, allow_modifications, allow_cancellations, created_at
-
-**attendees** (Convidados)
-
-- id, event_id, whatsapp_number, name
-- num_adults, num_children, comments, status, rsvp_date, last_modified
-
-## 🔒 Segurança
-
-- Senhas são armazenadas com hash bcrypt
-- Autenticação via sessão com cookie seguro
-- Rate limiting em endpoints sensíveis (5 RSVPs por minuto)
-- Validação de entrada em todos os endpoints
-- CORS configurado para permitir frontend
-
-## 📧 Notificações por Email
-
-O anfitrião recebe email quando:
-
-- Alguém confirma presença (RSVP)
-- Alguém modifica sua confirmação
-- Alguém cancela sua presença
-
-Os emails são enviados via SendGrid e incluem:
-
-- Nome do convidado
-- Número de adultos e crianças
-- Comentários especiais
-- Link para visualizar todos os convidados
-
 ## 🌐 APIs Externas
 
-O backend do sistema Venha integra-se com **1 API externa** principal (Google Geocoding) com fallback para Nominatim (OpenStreetMap). Abaixo está a documentação detalhada:
+O backend integra-se com **1 API externa** principal (Google Geocoding) com fallback para Nominatim (OpenStreetMap).
 
-> **Nota:** A API ViaCEP (busca de endereços por CEP) é chamada **diretamente pelo frontend**, não pelo backend. Consulte a documentação do frontend para detalhes.
+> **Nota:** A API ViaCEP (busca de endereços por CEP) é chamada **diretamente pelo frontend**, não pelo backend.
 
 ### Google Geocoding API
 
 **URL:** https://developers.google.com/maps/documentation/geocoding
 
-**Propósito:** Conversão de endereços completos em coordenadas geográficas (latitude/longitude) para exibição de mapas no frontend e localização precisa de eventos.
+**Propósito:** Conversão de endereços completos em coordenadas geográficas (latitude/longitude) para exibição de mapas no frontend.
 
 **Licença/Custo:**
 - Plano gratuito com crédito mensal de $200 USD
 - Primeiras 40.000 requisições/mês são gratuitas
-- Após limite: $5 por 1.000 requisições adicionais
 - Licença: Proprietária (Google Cloud Platform)
 
-**Registro:**
-1. Criar conta no [Google Cloud Console](https://console.cloud.google.com)
-2. Criar ou selecionar um projeto
-3. Ativar a API "Geocoding API"
-4. Criar credenciais (Chave de API)
-5. Configurar variável `GOOGLE_GEOCODING_API_KEY` no `.env`
-6. (Recomendado) Restringir chave por IP ou serviço
-
 **Uso no Backend:**
-- Arquivo: [services/geocoding_service.py](services/geocoding_service.py)
-- Endpoints expostos:
-  - `POST /api/events/create` (geocoding automático)
-  - `POST /api/events/geocode` (validação manual)
+- Arquivo: `services/geocoding_service.py`
+- Endpoints expostos: `POST /api/events/create` (geocoding automático), `POST /api/events/geocode` (validação manual)
 - Funcionalidade: Converter endereço textual em coordenadas lat/lng
-- Campos salvos no banco: `latitude`, `longitude` (tabela `events`)
 
-**Endpoint externo utilizado:**
+**Endpoints utilizados:**
 - `GET https://maps.googleapis.com/maps/api/geocode/json`
-  - Parâmetros: `address`, `key`
+  - Parâmetros: `address` (endereço completo), `key` (API key)
   - Retorna: `results[0].geometry.location` (lat, lng)
 
 **Fallback - Nominatim (OpenStreetMap):**
 
 Se a chave do Google não estiver configurada ou falhar, o sistema usa Nominatim como alternativa:
-
 - **URL:** https://nominatim.openstreetmap.org/
 - **Licença:** Open Data Commons Open Database License (ODbL)
 - **Sem custo:** Completamente gratuito
 - **Limitações:** Taxa de 1 requisição por segundo
-- **Endpoint:** `GET https://nominatim.openstreetmap.org/search`
+
+**Endpoints utilizados:**
+- `GET https://nominatim.openstreetmap.org/search`
   - Parâmetros: `q` (endereço), `format=json`, `limit=1`
-
-**Implementação:**
-```python
-def geocode_address(address):
-    # Tenta Google primeiro
-    if GOOGLE_API_KEY:
-        try:
-            # Google Geocoding
-            return (lat, lng)
-        except:
-            pass
-
-    # Fallback para Nominatim
-    try:
-        # OpenStreetMap Nominatim
-        return (lat, lng)
-    except:
-        return (None, None)
-```
+  - Retorna: `[0].lat`, `[0].lon`
 
 **Tratamento de Erro:**
 - Se ambas as APIs falharem, salva evento sem coordenadas
 - Frontend exibe evento normalmente, mas sem mapa
 - Comportamento gracioso: sistema continua funcional
 
----
-
 ## 📧 Notificações por Email - Modo Simulação
 
 **Implementação Atual:** O sistema **não envia emails reais**. Quando um convidado confirma, modifica ou cancela presença, o backend **imprime o conteúdo do email no console**.
 
 **Como funciona:**
-- Arquivo: [services/email_service.py](services/email_service.py)
+- Arquivo: `services/email_service.py`
 - Modo: **Sempre simulação** (logs no console)
 - Eventos que geram emails simulados:
   - Novo RSVP confirmado
   - Modificação de confirmação
   - Cancelamento de presença
 
-**Exemplo de log no console:**
+**Para ver os emails simulados:**
+
+Com o Docker rodando, execute em um novo terminal:
+```bash
+docker-compose logs -f backend
+```
+
+Faça um RSVP no frontend e observe o log formatado:
 ```
 ================================================================================
 📧 EMAIL SIMULADO - Novo RSVP para Festa de Aniversário
@@ -508,30 +336,6 @@ Assunto: Novo RSVP para Festa de Aniversário
 ================================================================================
 ```
 
-**Vantagens do modo simulação:**
-- Zero configuração necessária
-- Logs visíveis em `docker-compose logs -f backend`
-- Sem custos
-- Facilita debugging e testes
-
-**Melhoria Futura - SendGrid:**
-
-Para habilitar envio real de emails em produção, o código está preparado para integração com SendGrid:
-
-1. Criar conta em [SendGrid.com](https://sendgrid.com/) (100 emails/dia grátis)
-2. Configurar "Single Sender Verification"
-3. Criar API Key
-4. Adicionar ao `.env`:
-   ```bash
-   SENDGRID_API_KEY=SG.sua-chave-aqui
-   SENDER_EMAIL=seu-email-verificado@example.com
-   ```
-5. Reiniciar o backend
-
-**Documentação completa:** Veja comentários em `services/email_service.py`
-
----
-
 ## ⚙️ Resumo de Configuração
 
 **Obrigatórias:**
@@ -542,30 +346,6 @@ Para habilitar envio real de emails em produção, o código está preparado par
 **Opcionais com fallback:**
 - `GOOGLE_GEOCODING_API_KEY` - Usa Nominatim (OpenStreetMap) se não configurado
 
-**Para produção (futuro):**
-- `SENDGRID_API_KEY` - Para envio real de emails
-- `SENDER_EMAIL` - Email verificado no SendGrid
-
-### Variáveis de Ambiente (arquivo .env)
-
-```bash
-# Obrigatórias
-FLASK_APP=app.py
-FLASK_ENV=development
-SECRET_KEY=seu-secret-key-aqui
-DATABASE_URL=sqlite:///invitations.db
-
-# Opcional - Google Geocoding (usa Nominatim como fallback)
-GOOGLE_GEOCODING_API_KEY=sua-chave-google-aqui
-
-# Opcional - SendGrid (para produção futura)
-# SENDGRID_API_KEY=SG.sua-chave-aqui
-# SENDER_EMAIL=seu-email-verificado@gmail.com
-
-# Frontend
-FRONTEND_URL=http://localhost:3000
-```
-
 ### Comportamento Gracioso
 
 O sistema foi projetado para funcionar mesmo quando APIs externas não estão disponíveis:
@@ -575,110 +355,111 @@ O sistema foi projetado para funcionar mesmo quando APIs externas não estão di
 | Google Geocoding | Usa Nominatim (OSM) | Nenhum (fallback automático) |
 | Nominatim | Eventos criados sem coordenadas | Mapas não aparecem no frontend |
 
-**Emails:** Sistema sempre opera em modo simulação (logs no console). SendGrid pode ser configurado para produção futura.
-
-## ⚠️ Limitações e Observações
-
-- **WhatsApp:** Usado apenas como identificador único, sem integração real de API
-- **Rate Limiting:** Armazenado em memória (será perdido ao reiniciar o servidor)
-- **Banco de Dados:** SQLite não é recomendado para produção (usar PostgreSQL)
-- **Geocoding:** Se tanto Google quanto Nominatim falharem, evento é criado sem coordenadas (mapa não aparecerá no frontend)
+**Emails:** Sistema sempre opera em modo simulação (logs no console).
 
 ## 🐛 Solução de Problemas
 
-### Erro: "ModuleNotFoundError"
-
+### Erro: Porta já em uso (5000)
 ```bash
-# Certifique-se de que o ambiente virtual está ativado
-source venv/bin/activate  # Mac/Linux
-venv\Scripts\activate     # Windows
-
-# Reinstale as dependências
-pip install -r requirements.txt
+# Mac/Linux
+lsof -ti:5000 | xargs kill -9
 ```
 
-### Erro: "Invalid email format"
+### Containers não iniciam ou erro de dependências
+```bash
+docker-compose down -v
+docker-compose up --build --force-recreate
+```
 
-O validador de email está configurado com `check_deliverability=False`. Se ainda assim houver erro, verifique se o email tem formato válido (exemplo@dominio.com).
+### Frontend não consegue conectar ao backend
+- Verifique se `NEXT_PUBLIC_API_URL=http://localhost:5000` em `frontend/.env.local`
+- Verifique se `FRONTEND_URL=http://localhost:3000` em `backend/.env`
+- Certifique-se de que ambos os containers estão rodando: `docker ps`
 
-### Erro: "Invalid CEP"
-
-Certifique-se de usar um CEP válido brasileiro no formato `12345-678` ou `12345678`.
-
-### Emails não estão sendo enviados
-
-1. Verifique se `SENDGRID_API_KEY` está corretamente configurado no `.env`
-2. Confirme que você verificou um remetente no SendGrid
-3. Atualize o email em `services/email_service.py` linha 8
-4. Verifique os logs do console para erros
-
-### Não consigo criar eventos no Swagger
-
-1. Faça login primeiro em `/api/auth/login`
-2. O Swagger mantém a sessão automaticamente no navegador
-3. Se não funcionar, use Postman ou curl com cookies
+### Banco de dados não foi criado
+- O SQLite é criado automaticamente na primeira execução
+- Se houver problemas, remova os volumes: `docker-compose down -v`
 
 ## 📝 Notas para Avaliadores
 
 Este projeto foi desenvolvido como parte da Sprint de Arquitetura de Software da Pós-Graduação em Engenharia de Software da PUC-Rio.
 
-### Para rodar o projeto completo (Recomendado - Docker):
+### Guia Rápido de Avaliação
 
-1. Clone ambos os repositórios (backend e frontend) no mesmo diretório pai:
-   ```
-   projeto/
-   ├── backend/
-   └── frontend/
-   ```
+**Siga os passos de instalação acima** na seção "Configuração e Instalação (Docker)".
 
-2. Configure os arquivos `.env`:
-   - `backend/.env` (copie de `.env.example` e configure as chaves)
-   - `frontend/.env.local` (veja README do frontend)
+### Fluxo de Teste Sugerido
 
-3. A partir da pasta `frontend/`, rode:
-   ```bash
-   docker-compose up --build
-   ```
+1. **Criar Conta:** Acesse http://localhost:3000 e crie uma conta de anfitrião
+2. **Criar Evento:** No dashboard, crie um evento de teste (use um CEP válido como 22040-020)
+3. **Copiar Link:** Copie o link do convite gerado
+4. **Simular Convidado:** Abra o link em uma aba anônima
+5. **Confirmar Presença:** Preencha o formulário de RSVP
+6. **Ver Notificação:** Execute `docker-compose logs -f backend` para ver o email simulado
+7. **Gerenciar RSVPs:** Volte ao dashboard e visualize a lista de confirmações
+8. **Exportar CSV:** Exporte a lista de convidados
+9. **Modificar/Cancelar:** Use o mesmo WhatsApp para buscar e modificar a confirmação
 
-4. Acesse:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
-   - Documentação Swagger: http://localhost:5000/api/docs
+### 📧 Sistema de Notificações
 
-### Para rodar apenas o backend (Local):
+**O sistema opera em MODO SIMULAÇÃO.**
 
-1. Clone o repositório
-2. Siga os passos de instalação da "Opção 2: Desenvolvimento Local"
-3. Configure SendGrid (ou modifique `services/email_service.py` para imprimir no console)
-4. Execute `python app.py`
-5. Acesse a documentação em `http://localhost:5000/api/docs`
-
-### 📧 Modo de Emails (Importante para Avaliadores):
-
-**O sistema está configurado em MODO SIMULAÇÃO por padrão.**
-
-Os emails NÃO são enviados de verdade. Em vez disso, o conteúdo dos emails aparece nos logs do console quando:
-- Alguém confirma presença (RSVP)
-- Alguém modifica confirmação
-- Alguém cancela presença
+Os emails **NÃO são enviados** de verdade. O conteúdo aparece nos logs do console.
 
 **Para ver os emails simulados:**
-1. Rode o projeto com Docker: `docker-compose up`
-2. Observe os logs do backend: `docker-compose logs -f backend`
-3. Ao fazer um RSVP, verá um log formatado como:
-   ```
-   ================================================================================
-   📧 EMAIL SIMULADO - NOVO RSVP
-   ================================================================================
-   De: noreply@venha.app
-   Para: host@example.com
-   Assunto: Novo RSVP para Meu Evento
-   ...
-   ```
+1. Com o Docker rodando, abra um novo terminal
+2. Execute: `docker-compose logs -f backend`
+3. Faça um RSVP no frontend
+4. Observe o log formatado no terminal
 
-**Para habilitar SendGrid real em produção:**
+### 🗺️ APIs Externas e Fallbacks
 
-Veja as instruções completas no arquivo `services/email_service.py` (comentários no final do arquivo).
+Veja a seção **"APIs Externas"** acima para detalhes completos sobre endpoints e parâmetros.
+
+| API | Status | Fallback | Impacto |
+|-----|--------|----------|---------|
+| **Google Geocoding** | Opcional | Nominatim (OpenStreetMap) | Nenhum (fallback automático) |
+| **Nominatim** | Gratuito, sem chave | - | Se falhar, evento criado sem coordenadas |
+
+**Frontend APIs (configuradas no frontend/.env.local):**
+- **Google Maps:** Exibição de mapas nos convites
+- **WeatherAPI:** Previsão do tempo para data do evento
+- **ViaCEP:** Busca automática de endereço (API pública gratuita)
+
+### 🐳 Comandos Úteis para Avaliação
+
+**Ver logs em tempo real:**
+```bash
+docker-compose logs -f
+```
+
+**Ver apenas logs do backend (incluindo emails simulados):**
+```bash
+docker-compose logs -f backend
+```
+
+**Parar os containers:**
+```bash
+docker-compose down
+```
+
+**Reiniciar um serviço específico:**
+```bash
+docker restart venha_backend
+docker restart venha_frontend
+```
+
+**Limpar tudo e recomeçar:**
+```bash
+docker-compose down -v
+docker-compose up --build --force-recreate
+```
+
+### 📚 Documentação Adicional
+
+- **Arquitetura Completa:** Veja `ARCHITECTURE.md` para diagrama detalhado
+- **API REST:** Acesse http://localhost:5000/api/docs para documentação Swagger interativa
+- **Código Fonte:** Todos os endpoints estão documentados em `routes/`
 
 ## 📄 Licença
 
