@@ -28,19 +28,41 @@ Este sistema permite que anfitriões criem eventos, gerem links de convite únic
 
 ## 🏗️ Arquitetura da Aplicação
 
-O sistema Venha utiliza uma arquitetura de três camadas (Frontend, Backend API, Banco de Dados) com integração a múltiplas APIs externas.
+```mermaid
+graph LR
+    A[Frontend<br/>Next.js] <-->|REST/JSON| B[Backend<br/>Flask API]
+    B --> C[(Database<br/>SQLite)]
 
-**Diagrama de Arquitetura Completo:** Consulte o arquivo [`ARCHITECTURE.md`](ARCHITECTURE.md) para visualizar o diagrama detalhado da arquitetura, fluxo de dados, decisões de design e integrações com serviços externos.
+    A -.->|REST| D[ViaCEP]
+    A -.->|REST| E[Google Maps API]
+    A -.->|REST| F[WeatherAPI]
 
-**Visão Resumida:**
-- **Frontend (Next.js):** Interface web responsiva com SSR, páginas públicas (convites) e privadas (dashboard)
-- **Backend (Flask REST API):** Lógica de negócio, autenticação, validações e integrações com serviços externos
-- **Banco de Dados (SQLite):** Armazenamento persistente de hosts, eventos e confirmações
-- **Serviços Externos (Backend):** Google Geocoding com fallback Nominatim (coordenadas)
-- **Serviços Externos (Frontend):** ViaCEP (endereços brasileiros), Google Maps (visualização), WeatherAPI (previsão do tempo)
-- **Notificações:** Modo simulação - emails impressos no console
+    B -.->|REST| G[Google Geocoding API]
+    B -.->|REST<br/>fallback| H[Nominatim OSM]
 
-**Comunicação:** API REST com JSON, autenticação via session cookies, documentação Swagger/OpenAPI automática.
+    style A fill:#b3e0ff,stroke:#333,stroke-width:2px,color:#000
+    style B fill:#b3e0ff,stroke:#333,stroke-width:2px,color:#000
+    style C fill:#b3e0ff,stroke:#333,stroke-width:2px,color:#000
+    style D fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style E fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style F fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style G fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style H fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+```
+
+**Legenda:**
+- **Linha contínua (←→):** Comunicação obrigatória
+- **Linha tracejada (- -):** Comunicação opcional ou fallback
+- **Azul:** Módulos implementados no projeto
+- **Amarelo:** APIs e serviços externos
+
+**Componentes:**
+- **Frontend (Next.js):** Interface web responsiva, páginas públicas e privadas, autenticação via session cookies
+- **Backend (Flask):** API REST com lógica de negócio, validações, documentação Swagger automática
+- **Database (SQLite):** Armazenamento de hosts, eventos e confirmações (RSVPs)
+- **APIs Externas Frontend:** ViaCEP (endereços), Google Maps (mapas), WeatherAPI (clima)
+- **APIs Externas Backend:** Google Geocoding (coordenadas) com fallback Nominatim
+- **Notificações:** Emails simulados no console (sem envio real)
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -148,9 +170,6 @@ FRONTEND_URL=http://localhost:3000
 3. Ative a API "Geocoding API"
 4. Vá em "Credenciais" → "Criar credenciais" → "Chave de API"
 5. Copie a chave gerada
-6. (Recomendado) Configure restrições de IP ou serviço para segurança
-
-**Nota sobre APIs Externas:** As chaves de API serão compartilhadas separadamente para fins de avaliação. Não inclua chaves reais no código versionado.
 
 ### Passo 3: Configurar Frontend
 
@@ -182,7 +201,7 @@ Configure também o `.env.local` do frontend seguindo as instruções no README 
 
 3. Aguarde até ver as mensagens indicando que os serviços estão prontos. Então acesse:
    - **Frontend:** http://localhost:3000
-   - **Backend API:** http://localhost:5000
+   - **Backend API:** http://localhost:5000 (redireciona automaticamente para a documentação Swagger)
    - **Documentação Swagger:** http://localhost:5000/api/docs
 
 ### Comandos Úteis do Docker
@@ -228,6 +247,8 @@ docker-compose up --build --force-recreate
 ### Swagger UI
 
 Acesse a documentação interativa em: http://localhost:5000/api/docs
+
+**Nota:** http://localhost:5000 (rota raiz) redireciona automaticamente para a documentação Swagger.
 
 Aqui você pode:
 - Ver todos os endpoints disponíveis
@@ -460,7 +481,7 @@ docker-compose up --build --force-recreate
 
 ### 📚 Documentação Adicional
 
-- **Arquitetura Completa:** Veja `ARCHITECTURE.md` para diagrama detalhado
+- **Diagrama de Arquitetura:** Consulte a seção "🏗️ Arquitetura da Aplicação" no início deste README
 - **API REST:** Acesse http://localhost:5000/api/docs para documentação Swagger interativa
 - **Código Fonte:** Todos os endpoints e rotas estão implementados em `app.py`
 
