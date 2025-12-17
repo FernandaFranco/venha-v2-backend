@@ -134,7 +134,7 @@ FLASK_ENV=development
 SECRET_KEY=sua-chave-secreta-gerada-aqui
 DATABASE_URL=sqlite:///invitations.db
 
-# Opcional - Google Geocoding API (usa Nominatim como fallback se não configurado)
+# Necessária para endereços brasileiros (usa Nominatim como fallback, mas com limitações)
 GOOGLE_GEOCODING_API_KEY=sua-chave-google-aqui
 
 # Frontend URL
@@ -143,9 +143,9 @@ FRONTEND_URL=http://localhost:3000
 
 **Substituições necessárias:**
 - `sua-chave-secreta-gerada-aqui`: Cole a chave gerada no passo 2
-- `sua-chave-google-aqui`: Sua chave do Google Geocoding API (opcional)
+- `sua-chave-google-aqui`: Sua chave do Google Geocoding API (necessária para geocoding confiável de endereços brasileiros)
 
-**Como obter GOOGLE_GEOCODING_API_KEY (Opcional):**
+**Como obter GOOGLE_GEOCODING_API_KEY:**
 1. Acesse [Google Cloud Console](https://console.cloud.google.com)
 2. Crie um projeto ou selecione um existente
 3. Ative a API "Geocoding API"
@@ -292,7 +292,9 @@ Se a chave do Google não estiver configurada ou falhar, o sistema usa Nominatim
 - **URL:** https://nominatim.openstreetmap.org/
 - **Licença:** Open Data Commons Open Database License (ODbL)
 - **Sem custo:** Completamente gratuito
-- **Limitações:** Taxa de 1 requisição por segundo
+- **Limitações:**
+  - Taxa de 1 requisição por segundo
+  - **Precisão limitada com endereços brasileiros** (menor cobertura e acurácia)
 
 **Endpoints utilizados:**
 - `GET https://nominatim.openstreetmap.org/search`
@@ -343,8 +345,8 @@ Assunto: Novo RSVP para Festa de Aniversário
 - `FLASK_APP` - app.py
 - `DATABASE_URL` - sqlite:///invitations.db
 
-**Opcionais com fallback:**
-- `GOOGLE_GEOCODING_API_KEY` - Usa Nominatim (OpenStreetMap) se não configurado
+**Necessárias (com fallback):**
+- `GOOGLE_GEOCODING_API_KEY` - Necessária para geocoding preciso de endereços brasileiros. Usa Nominatim (OpenStreetMap) como fallback, mas com precisão limitada.
 
 ### Comportamento Gracioso
 
@@ -352,7 +354,7 @@ O sistema foi projetado para funcionar mesmo quando APIs externas não estão di
 
 | API | Se não configurada | Impacto no usuário |
 |-----|-------------------|-------------------|
-| Google Geocoding | Usa Nominatim (OSM) | Nenhum (fallback automático) |
+| Google Geocoding | Usa Nominatim (OSM) | Geocoding com precisão limitada (especialmente endereços brasileiros) |
 | Nominatim | Eventos criados sem coordenadas | Mapas não aparecem no frontend |
 
 **Emails:** Sistema sempre opera em modo simulação (logs no console).
@@ -418,7 +420,7 @@ Veja a seção **"APIs Externas"** acima para detalhes completos sobre endpoints
 
 | API | Status | Fallback | Impacto |
 |-----|--------|----------|---------|
-| **Google Geocoding** | Opcional | Nominatim (OpenStreetMap) | Nenhum (fallback automático) |
+| **Google Geocoding** | Necessária | Nominatim (OpenStreetMap) | Sem Google: geocoding com precisão limitada (especialmente endereços brasileiros) |
 | **Nominatim** | Gratuito, sem chave | - | Se falhar, evento criado sem coordenadas |
 
 **Frontend APIs (configuradas no frontend/.env.local):**
