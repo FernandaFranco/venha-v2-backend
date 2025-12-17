@@ -268,8 +268,13 @@ Aqui você pode:
 - `POST /api/events/create` - Criar novo evento (requer autenticação)
 - `GET /api/events/my-events` - Listar meus eventos (requer autenticação)
 - `GET /api/events/{slug}` - Obter detalhes de evento por slug (público)
+- `PUT /api/events/{event_id}` - Atualizar evento (requer autenticação)
+- `DELETE /api/events/{event_id}` - Deletar evento (requer autenticação)
+- `POST /api/events/{event_id}/duplicate` - Duplicar evento (requer autenticação)
 - `GET /api/events/{event_id}/attendees` - Listar convidados (requer autenticação)
-- `GET /api/events/{event_id}/export-csv` - Exportar convidados como CSV
+- `DELETE /api/events/{event_id}/attendees/{attendee_id}` - Remover convidado (requer autenticação)
+- `GET /api/events/{event_id}/export-csv` - Exportar lista de convidados como CSV
+- `POST /api/events/geocode` - Validar endereço e obter coordenadas
 
 **Convidados (RSVP):**
 - `POST /api/attendees/rsvp` - Confirmar presença em evento
