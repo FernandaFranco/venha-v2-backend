@@ -55,21 +55,18 @@ O sistema Venha utiliza uma arquitetura de três camadas (Frontend, Backend API,
 
 ```
 backend/
-├── app.py                      # Aplicação principal e rotas Swagger
+├── app.py                      # Aplicação principal com todas as rotas e documentação Swagger
 ├── extensions.py               # Inicialização de extensões (db, bcrypt, limiter)
-├── models.py                   # Modelos do banco de dados
-├── routes/                     # Rotas da API (blueprints)
-│   ├── __init__.py
-│   ├── auth.py                # Autenticação
-│   ├── events.py              # Gerenciamento de eventos
-│   └── attendees.py           # RSVPs e convidados
+├── models.py                   # Modelos do banco de dados (Host, Event, Attendee)
 ├── services/                   # Serviços externos
 │   ├── __init__.py
 │   ├── email_service.py       # Simulação de emails
 │   ├── geocoding_service.py   # Integração Google Geocoding/Nominatim
 │   └── cep_service.py         # Integração ViaCEP
+├── utils/                      # Utilitários
 ├── requirements.txt            # Dependências Python
 ├── .env.example               # Template de variáveis de ambiente
+├── Dockerfile                 # Dockerfile do backend
 └── .gitignore                 # Arquivos ignorados pelo Git
 ```
 
@@ -392,6 +389,10 @@ Este projeto foi desenvolvido como parte da Sprint de Arquitetura de Software da
 
 ### Fluxo de Teste Sugerido
 
+**Comportamento da Página Inicial:** Ao acessar http://localhost:3000, você será automaticamente redirecionado:
+- Para `/dashboard` se já estiver autenticado
+- Para `/auth` (autenticação) se não estiver autenticado
+
 1. **Criar Conta:** Acesse http://localhost:3000 e crie uma conta de anfitrião
 2. **Criar Evento:** No dashboard, crie um evento de teste (use um CEP válido como 22040-020)
 3. **Copiar Link:** Copie o link do convite gerado
@@ -461,7 +462,7 @@ docker-compose up --build --force-recreate
 
 - **Arquitetura Completa:** Veja `ARCHITECTURE.md` para diagrama detalhado
 - **API REST:** Acesse http://localhost:5000/api/docs para documentação Swagger interativa
-- **Código Fonte:** Todos os endpoints estão documentados em `routes/`
+- **Código Fonte:** Todos os endpoints e rotas estão implementados em `app.py`
 
 ## 📄 Licença
 
