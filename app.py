@@ -82,6 +82,17 @@ login_model = api.model(
     },
 )
 
+geocode_model = api.model(
+    "Geocode",
+    {
+        "address": fields.String(
+            required=True,
+            description="Endereço completo para geocodificação",
+            example="Av. Paulista, 1578 - Bela Vista, São Paulo - SP"
+        )
+    },
+)
+
 event_create_model = api.model(
     "EventCreate",
     {
@@ -183,6 +194,9 @@ rsvp_update_model = api.model(
 rsvp_cancel_model = api.model(
     "RSVPCancel",
     {
+        "event_slug": fields.String(
+            required=True, description="Slug do evento", example="festa-aniversario-abc123"
+        ),
         "whatsapp_number": fields.String(
             required=True, description="WhatsApp do convidado", example="5521988888888"
         ),
@@ -231,11 +245,11 @@ attendee_modify_model = api.model(
 @auth_ns.route("/signup")
 class Signup(Resource):
     @auth_ns.expect(signup_model)
-    @auth_ns.response(201, "Host created successfully")
-    @auth_ns.response(400, "Invalid input")
-    @auth_ns.response(409, "Email already registered")
+    @auth_ns.response(201, "Anfitrião criado com sucesso")
+    @auth_ns.response(400, "Entrada inválida")
+    @auth_ns.response(409, "Email já cadastrado")
     def post(self):
-        """Create new host account"""
+        """Criar nova conta de anfitrião"""
         data = request.get_json()
         required = ["email", "password", "name", "whatsapp_number"]
         if not all(field in data for field in required):
@@ -275,11 +289,11 @@ class Signup(Resource):
 @auth_ns.route("/login")
 class Login(Resource):
     @auth_ns.expect(login_model)
-    @auth_ns.response(200, "Login successful")
-    @auth_ns.response(400, "Missing credentials")
-    @auth_ns.response(401, "Invalid credentials")
+    @auth_ns.response(200, "Login realizado com sucesso")
+    @auth_ns.response(400, "Credenciais ausentes")
+    @auth_ns.response(401, "Credenciais inválidas")
     def post(self):
-        """Login as host"""
+        """Fazer login como anfitrião"""
         data = request.get_json()
         if not data.get("email") or not data.get("password"):
             api.abort(400, "Email e senha são obrigatórios")
@@ -304,19 +318,19 @@ class Login(Resource):
 
 @auth_ns.route("/logout")
 class Logout(Resource):
-    @auth_ns.response(200, "Logout successful")
+    @auth_ns.response(200, "Logout realizado com sucesso")
     def post(self):
-        """Logout current host"""
+        """Fazer logout do anfitrião atual"""
         session.pop("host_id", None)
         return {"message": "Logged out successfully"}, 200
 
 
 @auth_ns.route("/me")
 class CurrentHost(Resource):
-    @auth_ns.response(200, "Success")
-    @auth_ns.response(401, "Not authenticated")
+    @auth_ns.response(200, "Sucesso")
+    @auth_ns.response(401, "Não autenticado")
     def get(self):
-        """Get currently authenticated host"""
+        """Obter anfitrião autenticado atual"""
         if "host_id" not in session:
             api.abort(401, "Você precisa fazer login para acessar esta página")
 
@@ -338,11 +352,11 @@ class CurrentHost(Resource):
 @events_ns.route("/create")
 class CreateEvent(Resource):
     @events_ns.expect(event_create_model)
-    @events_ns.response(201, "Event created successfully")
-    @events_ns.response(400, "Invalid input")
-    @events_ns.response(401, "Not authenticated")
+    @events_ns.response(201, "Evento criado com sucesso")
+    @events_ns.response(400, "Entrada inválida")
+    @events_ns.response(401, "Não autenticado")
     def post(self):
-        """Create new event (requires authentication)"""
+        """Criar novo evento (requer autenticação)"""
         if "host_id" not in session:
             api.abort(
                 401, "Faça login para criar eventos"
@@ -405,10 +419,10 @@ class CreateEvent(Resource):
 
 @events_ns.route("/my-events")
 class MyEvents(Resource):
-    @events_ns.response(200, "Success")
-    @events_ns.response(401, "Not authenticated")
+    @events_ns.response(200, "Sucesso")
+    @events_ns.response(401, "Não autenticado")
     def get(self):
-        """Get all events for the logged-in host"""
+        """Obter todos os eventos do anfitrião logado"""
         if "host_id" not in session:
             api.abort(401, "Faça login para ver seus eventos")
 
@@ -455,10 +469,10 @@ class MyEvents(Resource):
 
 @events_ns.route("/<string:slug>")
 class EventBySlug(Resource):
-    @events_ns.response(200, "Success")
-    @events_ns.response(404, "Event not found")
+    @events_ns.response(200, "Sucesso")
+    @events_ns.response(404, "Evento não encontrado")
     def get(self, slug):
-        """Get event details by slug (for guests viewing invitation)"""
+        """Obter detalhes do evento por slug (para convidados visualizando o convite)"""
         event = Event.query.filter_by(slug=slug).first()
         if not event:
             api.abort(404, "Convite não encontrado. Verifique o link")
@@ -487,12 +501,12 @@ class EventBySlug(Resource):
 
 @events_ns.route("/<int:event_id>/attendees")
 class EventAttendees(Resource):
-    @events_ns.response(200, "Success")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
-    @events_ns.response(404, "Event not found")
+    @events_ns.response(200, "Sucesso")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
+    @events_ns.response(404, "Evento não encontrado")
     def get(self, event_id):
-        """Get all attendees for an event (host only)"""
+        """Obter todos os convidados de um evento (apenas anfitrião)"""
         if "host_id" not in session:
             api.abort(401, "Faça login para ver os convidados")
 
@@ -525,12 +539,12 @@ class EventAttendees(Resource):
 @events_ns.route("/<int:event_id>/attendees/<int:attendee_id>")
 class ManageAttendee(Resource):
     @events_ns.expect(attendee_update_model)
-    @events_ns.response(200, "Attendee updated")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
-    @events_ns.response(404, "Not found")
+    @events_ns.response(200, "Convidado atualizado")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
+    @events_ns.response(404, "Não encontrado")
     def put(self, event_id, attendee_id):
-        """Update attendee (host only)"""
+        """Atualizar convidado (apenas anfitrião)"""
         if "host_id" not in session:
             api.abort(401, "Faça login para editar convidados")
 
@@ -555,12 +569,12 @@ class ManageAttendee(Resource):
         db.session.commit()
         return {"message": "Attendee updated successfully"}, 200
 
-    @events_ns.response(200, "Attendee deleted")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
-    @events_ns.response(404, "Not found")
+    @events_ns.response(200, "Convidado deletado")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
+    @events_ns.response(404, "Não encontrado")
     def delete(self, event_id, attendee_id):
-        """Delete attendee (host only)"""
+        """Deletar convidado (apenas anfitrião)"""
         if "host_id" not in session:
             api.abort(401, "Faça login para deletar convidados")
 
@@ -579,11 +593,11 @@ class ManageAttendee(Resource):
 
 @events_ns.route("/<int:event_id>/export-csv")
 class ExportAttendees(Resource):
-    @events_ns.response(200, "CSV file")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
+    @events_ns.response(200, "Arquivo CSV")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
     def get(self, event_id):
-        """Export attendees as CSV (host only)"""
+        """Exportar convidados como CSV (apenas anfitrião)"""
         if "host_id" not in session:
             api.abort(401, "Faça login para exportar a lista de convidados")
 
@@ -631,12 +645,12 @@ class ExportAttendees(Resource):
 @events_ns.route("/<int:event_id>")
 class EventManagement(Resource):
     @events_ns.expect(event_update_model)
-    @events_ns.response(200, "Event updated")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
-    @events_ns.response(404, "Event not found")
+    @events_ns.response(200, "Evento atualizado")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
+    @events_ns.response(404, "Evento não encontrado")
     def put(self, event_id):
-        """Update event (host only)"""
+        """Atualizar evento (apenas anfitrião)"""
         if "host_id" not in session:
             api.abort(401, "Faça login para editar eventos")
 
@@ -700,12 +714,12 @@ class EventManagement(Resource):
             db.session.rollback()
             api.abort(500, "Erro ao atualizar evento. Verifique os dados e tente novamente")
 
-    @events_ns.response(200, "Event deleted")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
-    @events_ns.response(404, "Event not found")
+    @events_ns.response(200, "Evento deletado")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
+    @events_ns.response(404, "Evento não encontrado")
     def delete(self, event_id):
-        """Delete event (host only)"""
+        """Deletar evento (apenas anfitrião)"""
         if "host_id" not in session:
             api.abort(401, "Faça login para deletar eventos")
 
@@ -734,12 +748,12 @@ class EventManagement(Resource):
 
 @events_ns.route("/<int:event_id>/duplicate")
 class DuplicateEvent(Resource):
-    @events_ns.response(201, "Event duplicated")
-    @events_ns.response(401, "Not authenticated")
-    @events_ns.response(403, "Unauthorized")
-    @events_ns.response(404, "Event not found")
+    @events_ns.response(201, "Evento duplicado")
+    @events_ns.response(401, "Não autenticado")
+    @events_ns.response(403, "Não autorizado")
+    @events_ns.response(404, "Evento não encontrado")
     def post(self, event_id):
-        """Duplicate an existing event"""
+        """Duplicar um evento existente"""
         if "host_id" not in session:
             api.abort(401, "Faça login para duplicar eventos")
 
@@ -787,11 +801,12 @@ class DuplicateEvent(Resource):
 
 @events_ns.route("/geocode")
 class GeocodeResource(Resource):
-    @events_ns.response(200, "Geocoding successful")
-    @events_ns.response(400, "Invalid address")
+    @events_ns.expect(geocode_model)
+    @events_ns.response(200, "Geocodificação bem-sucedida")
+    @events_ns.response(400, "Endereço inválido")
     @limiter.limit("30 per minute")
     def post(self):
-        """Geocode an address to get latitude and longitude"""
+        """Geocodificar um endereço para obter latitude e longitude"""
         data = request.get_json()
 
         if not data or "address" not in data:
@@ -820,12 +835,12 @@ class GeocodeResource(Resource):
 @attendees_ns.route("/rsvp")
 class RSVPResource(Resource):
     @attendees_ns.expect(rsvp_model)
-    @attendees_ns.response(201, "RSVP successful")
-    @attendees_ns.response(400, "Invalid input or already RSVP'd")
-    @attendees_ns.response(404, "Event not found")
+    @attendees_ns.response(201, "Confirmação realizada com sucesso")
+    @attendees_ns.response(400, "Entrada inválida ou já confirmado")
+    @attendees_ns.response(404, "Evento não encontrado")
     @limiter.limit("30 per minute")
     def post(self):
-        """Create RSVP for an event"""
+        """Criar confirmação de presença para um evento"""
         data = request.get_json()
         required = ["event_slug", "whatsapp_number", "name", "num_adults"]
         if not all(field in data for field in required):
@@ -860,10 +875,10 @@ class RSVPResource(Resource):
 @attendees_ns.route("/find")
 class FindAttendee(Resource):
     @attendees_ns.expect(attendee_find_model)
-    @attendees_ns.response(200, "Attendee found")
-    @attendees_ns.response(404, "Attendee not found")
+    @attendees_ns.response(200, "Convidado encontrado")
+    @attendees_ns.response(404, "Convidado não encontrado")
     def post(self):
-        """Find attendee by WhatsApp and event slug"""
+        """Buscar convidado por WhatsApp e slug do evento"""
         data = request.get_json()
 
         event_slug = data.get("event_slug")
@@ -907,11 +922,11 @@ class FindAttendee(Resource):
 @attendees_ns.route("/modify")
 class ModifyRSVP(Resource):
     @attendees_ns.expect(attendee_modify_model)
-    @attendees_ns.response(200, "RSVP modified")
-    @attendees_ns.response(403, "Modifications not allowed")
-    @attendees_ns.response(404, "RSVP not found")
+    @attendees_ns.response(200, "Confirmação modificada")
+    @attendees_ns.response(403, "Modificações não permitidas")
+    @attendees_ns.response(404, "Confirmação não encontrada")
     def put(self):
-        """Modify existing RSVP"""
+        """Modificar confirmação de presença existente"""
         data = request.get_json()
 
         event_slug = data.get("event_slug")
@@ -969,12 +984,12 @@ class ModifyRSVP(Resource):
 
 @attendees_ns.route("/cancel")
 class CancelRSVP(Resource):
-    @attendees_ns.expect(attendee_find_model)
-    @attendees_ns.response(200, "RSVP cancelled")
-    @attendees_ns.response(403, "Cancellations not allowed")
-    @attendees_ns.response(404, "RSVP not found")
+    @attendees_ns.expect(rsvp_cancel_model)
+    @attendees_ns.response(200, "Confirmação cancelada")
+    @attendees_ns.response(403, "Cancelamentos não permitidos")
+    @attendees_ns.response(404, "Confirmação não encontrada")
     def post(self):
-        """Cancel existing RSVP"""
+        """Cancelar confirmação de presença existente"""
         data = request.get_json()
 
         event_slug = data.get("event_slug")
