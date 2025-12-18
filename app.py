@@ -30,7 +30,7 @@ bcrypt.init_app(app)
 limiter.init_app(app)
 CORS(app, supports_credentials=True, origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")])
 
-# Swagger API
+# API Swagger
 api = Api(
     app,
     version="1.0",
@@ -40,15 +40,15 @@ api = Api(
     catch_all_404s=False,
 )
 
-# Namespaces
+# Namespaces (grupos de endpoints)
 auth_ns = api.namespace(
-    "auth", description="Authentication operations", path="/api/auth"
+    "auth", description="Operações de autenticação", path="/api/auth"
 )
 events_ns = api.namespace(
-    "events", description="Event management operations", path="/api/events"
+    "events", description="Operações de gerenciamento de eventos", path="/api/events"
 )
 attendees_ns = api.namespace(
-    "attendees", description="Attendee/RSVP operations", path="/api/attendees"
+    "attendees", description="Operações de convidados/RSVP", path="/api/attendees"
 )
 
 # ============= MODELS =============
@@ -56,16 +56,16 @@ signup_model = api.model(
     "Signup",
     {
         "email": fields.String(
-            required=True, description="Host email", example="host@example.com"
+            required=True, description="Email do anfitrião", example="anfitriao@exemplo.com"
         ),
         "password": fields.String(
-            required=True, description="Password", example="securepass123"
+            required=True, description="Senha", example="senhaSegura123"
         ),
         "name": fields.String(
-            required=True, description="Host name", example="John Doe"
+            required=True, description="Nome do anfitrião", example="João Silva"
         ),
         "whatsapp_number": fields.String(
-            required=True, description="WhatsApp number", example="5521999999999"
+            required=True, description="Número do WhatsApp", example="5521999999999"
         ),
     },
 )
@@ -74,10 +74,10 @@ login_model = api.model(
     "Login",
     {
         "email": fields.String(
-            required=True, description="Host email", example="host@example.com"
+            required=True, description="Email do anfitrião", example="anfitriao@exemplo.com"
         ),
         "password": fields.String(
-            required=True, description="Password", example="securepass123"
+            required=True, description="Senha", example="senhaSegura123"
         ),
     },
 )
@@ -86,31 +86,31 @@ event_create_model = api.model(
     "EventCreate",
     {
         "title": fields.String(
-            required=True, description="Event title", example="Birthday Party"
+            required=True, description="Título do evento", example="Festa de Aniversário"
         ),
         "description": fields.String(
-            description="Event description", example="Join us for a celebration!"
+            description="Descrição do evento", example="Venha celebrar conosco!"
         ),
         "event_date": fields.String(
-            required=True, description="Event date (YYYY-MM-DD)", example="2025-12-25"
+            required=True, description="Data do evento (AAAA-MM-DD)", example="2025-12-25"
         ),
         "start_time": fields.String(
-            required=True, description="Start time (HH:MM)", example="18:00"
+            required=True, description="Horário de início (HH:MM)", example="18:00"
         ),
-        "end_time": fields.String(description="End time (HH:MM)", example="22:00"),
+        "end_time": fields.String(description="Horário de término (HH:MM)", example="22:00"),
         "address_cep": fields.String(
-            description="Brazilian CEP (optional)", example="22040-020"
+            description="CEP brasileiro (opcional)", example="22040-020"
         ),
         "address_full": fields.String(
             required=True,
-            description="Full address (coordinates will be automatically geocoded)",
+            description="Endereço completo (coordenadas serão geocodificadas automaticamente)",
             example="Av. Atlântica, 1702, Copacabana, Rio de Janeiro - RJ, Brasil",
         ),
         "allow_modifications": fields.Boolean(
-            description="Allow guests to modify RSVP", default=True, example=True
+            description="Permitir convidados modificarem RSVP", default=True, example=True
         ),
         "allow_cancellations": fields.Boolean(
-            description="Allow guests to cancel RSVP", default=True, example=True
+            description="Permitir convidados cancelarem RSVP", default=True, example=True
         ),
     },
 )
@@ -119,21 +119,21 @@ event_update_model = api.model(
     "EventUpdate",
     {
         "title": fields.String(
-            description="Event title", example="Festa de Aniversário (Atualizado)"
+            description="Título do evento", example="Festa de Aniversário (Atualizado)"
         ),
-        "description": fields.String(description="Event description"),
+        "description": fields.String(description="Descrição do evento"),
         "event_date": fields.String(
-            description="Event date (YYYY-MM-DD)", example="2024-12-25"
+            description="Data do evento (AAAA-MM-DD)", example="2024-12-25"
         ),
-        "start_time": fields.String(description="Start time (HH:MM)", example="18:00"),
-        "end_time": fields.String(description="End time (HH:MM)", example="23:00"),
-        "address_cep": fields.String(description="ZIP code"),
-        "address_full": fields.String(description="Full address"),
+        "start_time": fields.String(description="Horário de início (HH:MM)", example="18:00"),
+        "end_time": fields.String(description="Horário de término (HH:MM)", example="23:00"),
+        "address_cep": fields.String(description="CEP"),
+        "address_full": fields.String(description="Endereço completo"),
         "allow_modifications": fields.Boolean(
-            description="Allow guests to modify RSVP"
+            description="Permitir convidados modificarem RSVP"
         ),
         "allow_cancellations": fields.Boolean(
-            description="Allow guests to cancel RSVP"
+            description="Permitir convidados cancelarem RSVP"
         ),
     },
 )
@@ -142,21 +142,21 @@ rsvp_model = api.model(
     "RSVP",
     {
         "event_slug": fields.String(
-            required=True, description="Event slug", example="abc123"
+            required=True, description="Slug do evento", example="abc123"
         ),
         "whatsapp_number": fields.String(
-            required=True, description="Attendee WhatsApp", example="5521988888888"
+            required=True, description="WhatsApp do convidado", example="5521988888888"
         ),
         "name": fields.String(
-            required=True, description="Attendee name", example="Maria Silva"
+            required=True, description="Nome do convidado", example="Maria Silva"
         ),
         "num_adults": fields.Integer(
-            required=True, description="Number of adults", example=2
+            required=True, description="Número de adultos", example=2
         ),
-        "num_children": fields.Integer(description="Number of children", example=1),
+        "num_children": fields.Integer(description="Número de crianças", example=1),
         "comments": fields.String(
-            description="Special accommodations or allergies",
-            example="Vegetarian meal needed",
+            description="Acomodações especiais ou alergias",
+            example="Refeição vegetariana necessária",
         ),
     },
 )
@@ -166,16 +166,16 @@ rsvp_update_model = api.model(
     {
         "whatsapp_number": fields.String(
             required=True,
-            description="Attendee WhatsApp for identification",
+            description="WhatsApp do convidado para identificação",
             example="5521988888888",
         ),
-        "name": fields.String(description="Updated name", example="Maria Silva"),
-        "num_adults": fields.Integer(description="Updated number of adults", example=3),
+        "name": fields.String(description="Nome atualizado", example="Maria Silva"),
+        "num_adults": fields.Integer(description="Número atualizado de adultos", example=3),
         "num_children": fields.Integer(
-            description="Updated number of children", example=2
+            description="Número atualizado de crianças", example=2
         ),
         "comments": fields.String(
-            description="Updated comments", example="Now need vegan meal"
+            description="Comentários atualizados", example="Agora preciso de refeição vegana"
         ),
     },
 )
@@ -184,10 +184,10 @@ rsvp_cancel_model = api.model(
     "RSVPCancel",
     {
         "whatsapp_number": fields.String(
-            required=True, description="Attendee WhatsApp", example="5521988888888"
+            required=True, description="WhatsApp do convidado", example="5521988888888"
         ),
         "reason": fields.String(
-            description="Cancellation reason", example="Cannot attend due to conflict"
+            description="Motivo do cancelamento", example="Não poderei comparecer devido a um conflito"
         ),
     },
 )
@@ -195,10 +195,10 @@ rsvp_cancel_model = api.model(
 attendee_update_model = api.model(
     "AttendeeUpdate",
     {
-        "name": fields.String(description="Attendee name", example="Maria Silva"),
-        "num_adults": fields.Integer(description="Number of adults", example=2),
-        "num_children": fields.Integer(description="Number of children", example=1),
-        "comments": fields.String(description="Comments", example="Vegetarian"),
+        "name": fields.String(description="Nome do convidado", example="Maria Silva"),
+        "num_adults": fields.Integer(description="Número de adultos", example=2),
+        "num_children": fields.Integer(description="Número de crianças", example=1),
+        "comments": fields.String(description="Comentários", example="Vegetariano"),
     },
 )
 
@@ -206,10 +206,10 @@ attendee_find_model = api.model(
     "AttendeeFind",
     {
         "event_slug": fields.String(
-            required=True, description="Event slug", example="festa-aniversario-abc123"
+            required=True, description="Slug do evento", example="festa-aniversario-abc123"
         ),
         "whatsapp_number": fields.String(
-            required=True, description="WhatsApp number", example="5521999999999"
+            required=True, description="Número do WhatsApp", example="5521999999999"
         ),
     },
 )
@@ -217,12 +217,12 @@ attendee_find_model = api.model(
 attendee_modify_model = api.model(
     "AttendeeModify",
     {
-        "event_slug": fields.String(required=True, description="Event slug"),
-        "whatsapp_number": fields.String(required=True, description="WhatsApp number"),
-        "name": fields.String(description="New name"),
-        "num_adults": fields.Integer(description="New number of adults"),
-        "num_children": fields.Integer(description="New number of children"),
-        "comments": fields.String(description="New comments"),
+        "event_slug": fields.String(required=True, description="Slug do evento"),
+        "whatsapp_number": fields.String(required=True, description="Número do WhatsApp"),
+        "name": fields.String(description="Novo nome"),
+        "num_adults": fields.Integer(description="Novo número de adultos"),
+        "num_children": fields.Integer(description="Novo número de crianças"),
+        "comments": fields.String(description="Novos comentários"),
     },
 )
 
@@ -651,7 +651,7 @@ class EventManagement(Resource):
         data = request.get_json()
 
         try:
-            # Update basic fields
+            # Atualizar campos básicos
             if "title" in data:
                 event.title = data["title"]
 
@@ -678,7 +678,7 @@ class EventManagement(Resource):
             if "address_full" in data:
                 event.address_full = data["address_full"]
 
-                # Re-geocode if address changed
+                # Re-geocodificar se endereço mudou
                 lat, lon = geocode_address(data["address_full"])
                 event.latitude = lat
                 event.longitude = lon
@@ -718,10 +718,10 @@ class EventManagement(Resource):
             api.abort(403, "Você não tem permissão para deletar este evento")
 
         try:
-            # Delete all attendees first (cascade should handle this, but being explicit)
+            # Deletar todos os convidados primeiro (cascade deve lidar com isso, mas sendo explícito)
             Attendee.query.filter_by(event_id=event_id).delete()
 
-            # Delete event
+            # Deletar evento
             db.session.delete(event)
             db.session.commit()
 
@@ -752,7 +752,7 @@ class DuplicateEvent(Resource):
             api.abort(403, "Você não tem permissão para duplicar este evento")
 
         try:
-            # Create new event with same data
+            # Criar novo evento com os mesmos dados
             new_event = Event(
                 host_id=session["host_id"],
                 title=f"{original_event.title} (Cópia)",
@@ -872,12 +872,12 @@ class FindAttendee(Resource):
         if not event_slug or not whatsapp_number:
             api.abort(400, "Link do evento e número de WhatsApp são obrigatórios")
 
-        # Find event
+        # Buscar evento
         event = Event.query.filter_by(slug=event_slug).first()
         if not event:
             api.abort(404, "Evento não encontrado. Verifique o link")
 
-        # Find attendee
+        # Buscar convidado
         attendee = Attendee.query.filter_by(
             event_id=event.id, whatsapp_number=whatsapp_number
         ).first()
@@ -920,16 +920,16 @@ class ModifyRSVP(Resource):
         if not event_slug or not whatsapp_number:
             api.abort(400, "Link do evento e número de WhatsApp são obrigatórios")
 
-        # Find event
+        # Buscar evento
         event = Event.query.filter_by(slug=event_slug).first()
         if not event:
             api.abort(404, "Evento não encontrado")
 
-        # Check if modifications are allowed
+        # Verificar se modificações são permitidas
         if not event.allow_modifications:
             api.abort(403, "O anfitrião não permitiu modificações para este evento")
 
-        # Find attendee
+        # Buscar convidado
         attendee = Attendee.query.filter_by(
             event_id=event.id, whatsapp_number=whatsapp_number
         ).first()
@@ -937,7 +937,7 @@ class ModifyRSVP(Resource):
         if not attendee:
             api.abort(404, "Confirmação não encontrada. Verifique o número de WhatsApp")
 
-        # Update fields
+        # Atualizar campos
         if "name" in data:
             attendee.name = data["name"]
         if "num_adults" in data:
@@ -947,7 +947,7 @@ class ModifyRSVP(Resource):
         if "comments" in data:
             attendee.comments = data["comments"]
 
-        # If was cancelled, reactivate
+        # Se foi cancelado, reativar
         if attendee.status == "cancelled":
             attendee.status = "confirmed"
 
@@ -983,16 +983,16 @@ class CancelRSVP(Resource):
         if not event_slug or not whatsapp_number:
             api.abort(400, "Link do evento e número de WhatsApp são obrigatórios")
 
-        # Find event
+        # Buscar evento
         event = Event.query.filter_by(slug=event_slug).first()
         if not event:
             api.abort(404, "Evento não encontrado")
 
-        # Check if cancellations are allowed
+        # Verificar se cancelamentos são permitidos
         if not event.allow_cancellations:
             api.abort(403, "O anfitrião não permitiu cancelamentos para este evento")
 
-        # Find attendee
+        # Buscar convidado
         attendee = Attendee.query.filter_by(
             event_id=event.id, whatsapp_number=whatsapp_number
         ).first()
@@ -1000,7 +1000,7 @@ class CancelRSVP(Resource):
         if not attendee:
             api.abort(404, "Confirmação não encontrada. Verifique o número de WhatsApp")
 
-        # Cancel RSVP
+        # Cancelar RSVP
         attendee.status = "cancelled"
         db.session.commit()
         send_cancellation_notification(event, attendee, data.get("reason", ""))
@@ -1008,16 +1008,16 @@ class CancelRSVP(Resource):
         return {"message": "RSVP cancelled successfully"}, 200
 
 
-# Keep original blueprints for backward compatibility
-# Blueprints removed - all endpoints now use Flask-RESTX
+# Manter blueprints originais para compatibilidade retroativa
+# Blueprints removidos - todos os endpoints agora usam Flask-RESTX
 
 
-# Root redirect - override Flask-RESTX root route
+# Redirecionamento raiz - sobrescrever rota raiz do Flask-RESTX
 def redirect_root():
     return redirect("/api/docs")
 
 
-# Override the Flask-RESTX root endpoint
+# Sobrescrever o endpoint raiz do Flask-RESTX
 app.view_functions["root"] = redirect_root
 
 
