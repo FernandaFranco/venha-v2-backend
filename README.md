@@ -95,8 +95,10 @@ O backend integra-se com **1 API externa** principal (Google Geocoding) com fall
 
 - Arquivo: `services/geocoding_service.py`
 - Endpoints que utilizam:
-  - `POST /api/events/create` - Geocodifica automaticamente o endereço ao criar um evento
-  - `POST /api/events/geocode` - Endpoint dedicado para validar e geocodificar endereços antes da criação
+
+  - `POST /api/events/geocode` - Endpoint dedicado para geocodificar o endereço antes da criação do evento (mapa para conferência do anfitrião)
+  - `POST /api/events/create` - Geocodifica automaticamente o endereço ao criar um evento e persiste as coordenadas
+
 - Funcionalidade: Converter endereço textual em coordenadas lat/lng. Coordenadas são necessárias para exibir o endereço do evento no mapa (Google Maps) na página de convite.
 
 **Endpoints utilizados:**
