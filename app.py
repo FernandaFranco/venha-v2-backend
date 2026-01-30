@@ -10,7 +10,6 @@ from services.email_service import (
     send_modification_notification,
     send_cancellation_notification,
 )
-from services.geocoding_service import geocode_address
 from datetime import datetime
 from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
@@ -82,17 +81,6 @@ login_model = api.model(
     },
 )
 
-geocode_model = api.model(
-    "Geocode",
-    {
-        "address": fields.String(
-            required=True,
-            description="Endereço completo para geocodificação",
-            example="Av. Paulista, 1578 - Bela Vista, São Paulo - SP"
-        )
-    },
-)
-
 event_create_model = api.model(
     "EventCreate",
     {
@@ -114,7 +102,7 @@ event_create_model = api.model(
         ),
         "address_full": fields.String(
             required=True,
-            description="Endereço completo (coordenadas serão geocodificadas automaticamente)",
+            description="Endereço completo",
             example="Av. Atlântica, 1702, Copacabana, Rio de Janeiro - RJ, Brasil",
         ),
         "allow_modifications": fields.Boolean(
@@ -384,10 +372,6 @@ class CreateEvent(Resource):
         except ValueError:
             api.abort(400, "Formato de data/hora inválido. Use AAAA-MM-DD para data e HH:MM para horário")
 
-        # Tentar geocodificar o endereço automaticamente
-        latitude, longitude = geocode_address(data["address_full"])
-
-        # Criar evento (se não encontrou coordenadas, salva None)
         event = Event(
             host_id=session["host_id"],
             title=data["title"],
@@ -395,10 +379,8 @@ class CreateEvent(Resource):
             event_date=event_date,
             start_time=start_time,
             end_time=end_time,
-            address_cep=data.get("address_cep", ""),  # Apenas armazenar, não validar
+            address_cep=data.get("address_cep", ""),
             address_full=data["address_full"],
-            latitude=latitude,
-            longitude=longitude,
             allow_modifications=data.get("allow_modifications", True),
             allow_cancellations=data.get("allow_cancellations", True),
         )
@@ -446,8 +428,6 @@ class MyEvents(Resource):
                     ),
                     "address_cep": event.address_cep,
                     "address_full": event.address_full,
-                    "latitude": event.latitude,
-                    "longitude": event.longitude,
                     "allow_modifications": bool(event.allow_modifications),
                     "allow_cancellations": bool(event.allow_cancellations),
                     "attendee_count": len(
@@ -489,8 +469,6 @@ class EventBySlug(Resource):
                     event.end_time.strftime("%H:%M") if event.end_time else None
                 ),
                 "address_full": event.address_full,
-                "latitude": event.latitude,
-                "longitude": event.longitude,
                 "allow_modifications": bool(event.allow_modifications),
                 "allow_cancellations": bool(event.allow_cancellations),
                 "host_name": event.host.name,
@@ -692,11 +670,6 @@ class EventManagement(Resource):
             if "address_full" in data:
                 event.address_full = data["address_full"]
 
-                # Re-geocodificar se endereço mudou
-                lat, lon = geocode_address(data["address_full"])
-                event.latitude = lat
-                event.longitude = lon
-
             if "allow_modifications" in data:
                 event.allow_modifications = data["allow_modifications"]
 
@@ -776,8 +749,6 @@ class DuplicateEvent(Resource):
                 end_time=original_event.end_time,
                 address_cep=original_event.address_cep,
                 address_full=original_event.address_full,
-                latitude=original_event.latitude,
-                longitude=original_event.longitude,
                 allow_modifications=original_event.allow_modifications,
                 allow_cancellations=original_event.allow_cancellations,
             )
@@ -797,38 +768,6 @@ class DuplicateEvent(Resource):
         except SQLAlchemyError:
             db.session.rollback()
             api.abort(500, "Erro ao duplicar evento. Tente novamente")
-
-
-@events_ns.route("/geocode")
-class GeocodeResource(Resource):
-    @events_ns.expect(geocode_model)
-    @events_ns.response(200, "Geocodificação bem-sucedida")
-    @events_ns.response(400, "Endereço inválido")
-    @limiter.limit("30 per minute")
-    def post(self):
-        """Geocodificar um endereço para obter latitude e longitude"""
-        data = request.get_json()
-
-        if not data or "address" not in data:
-            api.abort(400, "Campo 'address' é obrigatório")
-
-        address = data["address"].strip()
-        if not address:
-            api.abort(400, "Endereço não pode estar vazio")
-
-        latitude, longitude = geocode_address(address)
-
-        if latitude is None or longitude is None:
-            return {
-                "latitude": None,
-                "longitude": None,
-                "message": "Não foi possível geocodificar o endereço. Verifique se está completo e correto."
-            }, 200
-
-        return {
-            "latitude": latitude,
-            "longitude": longitude
-        }, 200
 
 
 # ============= ATTENDEE ROUTES =============
