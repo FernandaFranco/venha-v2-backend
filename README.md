@@ -1,6 +1,8 @@
-# Venha - Backend (Flask)
+# Venha v2 - Backend (Flask)
 
 API REST para o sistema de convites online Venha, permitindo criação e gerenciamento de eventos com funcionalidade de RSVP.
+
+> **Nota:** Esta é a versão 2 (v2) do Venha, com arquitetura simplificada. A versão original está disponível em [rsvp_app_api](https://github.com/FernandaFranco/rsvp_app_api).
 
 ## 📋 Sobre o Projeto
 
@@ -29,10 +31,8 @@ O sistema Venha permite que anfitriões criem eventos e gerem um link de convite
 
 ## 🏗️ Arquitetura da Aplicação
 
-![Diagrama de Arquitetura](docs/architecture-diagram.png)
-
 <details>
-<summary>💡 Ver código Mermaid (clique para expandir)</summary>
+<summary>💡 Ver diagrama de arquitetura (clique para expandir)</summary>
 
 ```mermaid
 graph LR
@@ -40,11 +40,8 @@ graph LR
     B <-->|SQL| C[("Database<br/>SQLite<br/>(local)")]
 
     A <-.->|REST| D[ViaCEP]
-    A <-.->|REST| E[Google Maps API]
+    A <-.->|iframe| E[Google Maps]
     A <-.->|REST| F[WeatherAPI]
-
-    B <-.->|REST| G[Google Geocoding API]
-    B <-.->|REST<br/>fallback| H[Nominatim OSM]
 
     style A fill:#b3e0ff,stroke:#333,stroke-width:2px,color:#000
     style B fill:#b3e0ff,stroke:#333,stroke-width:2px,color:#000
@@ -52,8 +49,6 @@ graph LR
     style D fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
     style E fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
     style F fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
-    style G fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
-    style H fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
 ```
 
 </details>
@@ -61,7 +56,7 @@ graph LR
 **Legenda:**
 
 - **Linha contínua (←→):** Comunicação obrigatória
-- **Linha tracejada (←-→):** Comunicação opcional ou fallback
+- **Linha tracejada (←-→):** Comunicação opcional
 - **🐳 (Docker):** Container Docker separado
 - **Azul:** Módulos implementados no projeto
 - **Amarelo:** APIs externas
@@ -71,64 +66,8 @@ graph LR
 - **Frontend (Next.js) 🐳:** Interface web responsiva, páginas públicas e privadas, autenticação via session cookies
 - **Backend (Flask) 🐳:** API REST com lógica de negócio, validações, documentação Swagger automática
 - **Database (SQLite):** Arquivo local montado via volume Docker para persistência de dados (hosts, eventos e RSVPs)
-- **APIs Externas Frontend:** ViaCEP (endereços), Google Maps (mapas), WeatherAPI (clima)
-- **APIs Externas Backend:** Google Geocoding (coordenadas) com fallback Nominatim
+- **APIs Externas:** ViaCEP (endereços), Google Maps (mapas via iframe), WeatherAPI (clima)
 - **Notificações:** Emails simulados no console (sem envio real)
-
-## 🌐 APIs Externas
-
-O backend integra-se com **1 API externa** principal (Google Geocoding) com fallback para Nominatim (OpenStreetMap).
-
-### Google Geocoding API
-
-**URL:** https://developers.google.com/maps/documentation/geocoding
-
-**Propósito:** Conversão de endereços completos em coordenadas geográficas (latitude/longitude) para exibição de mapas no frontend.
-
-**Licença/Custo:**
-
-- Plano gratuito com crédito mensal de $200 USD
-- Primeiras 40.000 requisições/mês são gratuitas
-- Licença: Proprietária (Google Cloud Platform)
-
-**Uso no Backend:**
-
-- Arquivo: `services/geocoding_service.py`
-- Endpoints que utilizam:
-
-  - `POST /api/events/geocode` - Endpoint dedicado para geocodificar o endereço antes da criação do evento (mapa para conferência do anfitrião)
-  - `POST /api/events/create` - Geocodifica automaticamente o endereço ao criar um evento e persiste as coordenadas
-
-- Funcionalidade: Converter endereço textual em coordenadas lat/lng. Coordenadas são necessárias para exibir o endereço do evento no mapa (Google Maps) na página de convite.
-
-**Endpoints utilizados:**
-
-- `GET https://maps.googleapis.com/maps/api/geocode/json`
-  - Parâmetros: `address` (endereço completo), `key` (API key)
-  - Retorna: `results[0].geometry.location` (lat, lng)
-
-**Fallback - Nominatim (OpenStreetMap):**
-
-Se a chave do Google não estiver configurada ou falhar, o sistema usa Nominatim como alternativa:
-
-- **URL:** https://nominatim.openstreetmap.org/
-- **Licença:** Open Data Commons Open Database License (ODbL)
-- **Sem custo:** Completamente gratuito
-- **Limitações:**
-  - Taxa de 1 requisição por segundo
-  - **Precisão limitada com endereços brasileiros** (menor cobertura e acurácia)
-
-**Endpoints utilizados:**
-
-- `GET https://nominatim.openstreetmap.org/search`
-  - Parâmetros: `q` (endereço), `format=json`, `limit=1`
-  - Retorna: `[0].lat`, `[0].lon`
-
-**Tratamento de Erro:**
-
-- Se ambas as APIs falharem, salva evento sem coordenadas
-- Frontend exibe evento normalmente, mas sem mapa
-- Comportamento gracioso: sistema continua funcional
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -148,9 +87,7 @@ backend/
 ├── models.py                   # Modelos do banco de dados (Host, Event, Attendee)
 ├── services/                   # Serviços externos
 │   ├── __init__.py
-│   ├── email_service.py       # Simulação de emails
-│   ├── geocoding_service.py   # Integração Google Geocoding/Nominatim
-│   └── cep_service.py         # Integração ViaCEP
+│   └── email_service.py       # Simulação de emails
 ├── utils/                      # Utilitários
 ├── requirements.txt            # Dependências Python
 ├── .env.example               # Template de variáveis de ambiente
@@ -175,8 +112,8 @@ Crie um diretório pai e clone ambos os projetos:
 ```bash
 mkdir venha_project
 cd venha_project
-git clone https://github.com/FernandaFranco/rsvp_app_api.git backend
-git clone https://github.com/FernandaFranco/rsvp_app_front_end.git frontend
+git clone https://github.com/FernandaFranco/venha-v2-backend.git backend
+git clone https://github.com/FernandaFranco/venha-v2-frontend.git frontend
 ```
 
 **Importante:** Os comandos acima clonam os repositórios nas pastas `backend` e `frontend` respectivamente, que são os nomes esperados pelo Docker Compose.
@@ -217,22 +154,9 @@ FLASK_ENV=development
 SECRET_KEY=sua-chave-secreta-aqui    # Gere com: python3 -c "import secrets; print(secrets.token_hex(32))"
 DATABASE_URL=sqlite:///invitations.db
 
-# Necessária para endereços brasileiros (usa Nominatim como fallback, mas com limitações)
-GOOGLE_GEOCODING_API_KEY=sua-chave-google-aqui
-
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
 ```
-
-**Como obter GOOGLE_GEOCODING_API_KEY:**
-
-1. Acesse [Google Cloud Console](https://console.cloud.google.com)
-2. Crie um projeto ou selecione um existente
-3. Ative a API "Geocoding API"
-4. Vá em "Credenciais" → "Criar credenciais" → "Chave de API"
-5. Copie a chave gerada
-
-> **Nota para Avaliadores:** A chave de API do Google Geocoding é a mesma do Maps e será disponibilizada de modo privado ao enviar as URLs para avaliação.
 
 ### Passo 3: Configurar Frontend (.env.local)
 
@@ -243,11 +167,9 @@ cd ../frontend
 cp .env.local.example .env.local
 ```
 
-Edite o arquivo `frontend/.env.local` e configure as chaves de API necessárias (Google Maps e WeatherAPI).
+Edite o arquivo `frontend/.env.local` e configure a chave da WeatherAPI.
 
-Veja o README do frontend para instruções completas sobre como obter as chaves de API.
-
-> **Nota para Avaliadores:** As chaves de API seram disponibilizadas de modo privado ao enviar as URLs para avaliação.
+Veja o README do frontend para instruções completas sobre como obter a chave de API.
 
 ### Passo 4: Rodar com Docker Compose
 
@@ -348,5 +270,3 @@ Este projeto foi desenvolvido para fins educacionais.
 Fernanda Franco
 
 PUC-Rio - Pós-Graduação em Engenharia de Software
-
-Sprint de Arquitetura de Software - 2025
