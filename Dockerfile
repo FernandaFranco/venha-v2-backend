@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código da aplicação
 COPY . .
 
+# Tornar entrypoint executavel
+RUN chmod +x entrypoint.sh
+
 # Desabilitar buffering do Python (para ver logs em tempo real)
 ENV PYTHONUNBUFFERED=1
 
@@ -20,7 +23,6 @@ ENV PYTHONUNBUFFERED=1
 ENV PORT=5000
 EXPOSE 5000
 
-# Comando para producao usando gunicorn
+# Usar entrypoint script para producao
 # Para desenvolvimento local, docker-compose.yml sobrescreve com "python app.py"
-# Usa exec form com shell explicito para garantir expansao de $PORT
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000}"]
+ENTRYPOINT ["./entrypoint.sh"]
