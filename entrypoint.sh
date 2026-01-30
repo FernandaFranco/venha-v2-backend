@@ -1,5 +1,4 @@
 #!/bin/sh
-# Entrypoint script para garantir que PORT seja lido corretamente
-PORT="${PORT:-5000}"
-echo "Starting gunicorn on port $PORT"
-exec gunicorn app:app --bind "0.0.0.0:$PORT"
+# Entrypoint script para producao
+echo "Starting gunicorn on port 5000"
+exec gunicorn app:app --bind "0.0.0.0:5000"
