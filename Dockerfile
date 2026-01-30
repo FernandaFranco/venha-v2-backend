@@ -22,4 +22,5 @@ EXPOSE 5000
 
 # Comando para producao usando gunicorn
 # Para desenvolvimento local, docker-compose.yml sobrescreve com "python app.py"
-CMD gunicorn app:app --bind 0.0.0.0:$PORT
+# Usa exec form com shell explicito para garantir expansao de $PORT
+CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000}"]
