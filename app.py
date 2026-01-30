@@ -20,14 +20,31 @@ import io
 load_dotenv()
 
 app = Flask(__name__)
+
+# Configurações básicas
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Configuração do banco de dados (suporta SQLite e PostgreSQL)
+database_url = os.getenv("DATABASE_URL", "sqlite:///invitations.db")
+# Railway usa postgres:// mas SQLAlchemy precisa de postgresql://
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+
+# Configurações de segurança para cookies de sessão (produção)
+is_production = os.getenv("FLASK_ENV") == "production"
+app.config["SESSION_COOKIE_SECURE"] = is_production  # HTTPS only em produção
+app.config["SESSION_COOKIE_HTTPONLY"] = True  # Previne acesso via JavaScript
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # Proteção CSRF
 
 db.init_app(app)
 bcrypt.init_app(app)
 limiter.init_app(app)
-CORS(app, supports_credentials=True, origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")])
+
+# CORS - suporta múltiplas origens (desenvolvimento e produção)
+allowed_origins = os.getenv("FRONTEND_URL", "http://localhost:3000").split(",")
+CORS(app, supports_credentials=True, origins=allowed_origins)
 
 # API Swagger
 api = Api(
