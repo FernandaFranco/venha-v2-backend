@@ -1,4 +1,6 @@
 #!/bin/sh
 # Entrypoint script para producao
-echo "Starting gunicorn on port 5000"
-exec gunicorn app:app --bind "0.0.0.0:5000"
+# Railway injeta PORT, usa 5000 como fallback para desenvolvimento
+APP_PORT="${PORT:-5000}"
+echo "Starting gunicorn on port $APP_PORT"
+exec gunicorn app:app --bind "0.0.0.0:$APP_PORT"
