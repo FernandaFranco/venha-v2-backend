@@ -16,8 +16,10 @@ COPY . .
 # Desabilitar buffering do Python (para ver logs em tempo real)
 ENV PYTHONUNBUFFERED=1
 
-# Expor porta do Flask
+# Porta padrão (Railway injeta PORT automaticamente)
+ENV PORT=5000
 EXPOSE 5000
 
-# Comando para rodar a aplicação em modo desenvolvimento
-CMD ["python", "app.py"]
+# Comando para producao usando gunicorn
+# Para desenvolvimento local, docker-compose.yml sobrescreve com "python app.py"
+CMD gunicorn app:app --bind 0.0.0.0:$PORT
