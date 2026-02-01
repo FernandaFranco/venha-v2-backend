@@ -36,7 +36,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 is_production = os.getenv("FLASK_ENV") == "production"
 app.config["SESSION_COOKIE_SECURE"] = is_production  # HTTPS only em produção
 app.config["SESSION_COOKIE_HTTPONLY"] = True  # Previne acesso via JavaScript
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # Proteção CSRF
+# SameSite=None necessário para cross-domain (Vercel frontend + Railway backend)
+# Em produção, Secure=True é obrigatório quando SameSite=None
+app.config["SESSION_COOKIE_SAMESITE"] = "None" if is_production else "Lax"
 
 db.init_app(app)
 bcrypt.init_app(app)
